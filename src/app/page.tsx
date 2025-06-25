@@ -1,14 +1,17 @@
 // src/app/page.tsx
 'use client'
+import OnboardingForm from './OnboardingForm';
+import Link from 'next/link';
 
 export default function HomePage() {
   return (
-    <div className="max-w-md mx-auto">
-      <div className="bg-red-500 text-white p-6 rounded-lg shadow-lg">
-        <h1 className="text-2xl font-bold mb-2">Local Tailwind is live!</h1>
-      </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+      <nav className="w-full max-w-md mx-auto mt-4 mb-6 flex justify-end">
+        <Link href="/discover">
+          <span className="text-blue-600 hover:underline font-medium">Discover Profiles</span>
+        </Link>
+      </nav>
+      <OnboardingForm />
     </div>
-    // <h1>Hello world</h1>
-
-  )
+  );
 }
