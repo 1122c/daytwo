@@ -1,5 +1,7 @@
 "use client";
 import React, { useState } from "react";
+import { db } from "@/services/firebase";
+import { collection, addDoc } from "firebase/firestore";
 
 const steps = ["Values", "Goals", "Public Profiles"];
 
@@ -14,6 +16,9 @@ export default function OnboardingForm() {
     tiktok: "",
     onlyfans: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
 
   function handleNext() {
     setStep((s) => Math.min(s + 1, steps.length - 1));
@@ -21,11 +26,34 @@ export default function OnboardingForm() {
   function handleBack() {
     setStep((s) => Math.max(s - 1, 0));
   }
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // For now, just log the data
-    console.log({ values, goals, profiles });
-    alert("Onboarding complete! Check the console for your data.");
+    setLoading(true);
+    setError("");
+    setSuccess(false);
+    try {
+      await addDoc(collection(db, "profiles"), {
+        values,
+        goals,
+        publicProfiles: profiles,
+        createdAt: new Date(),
+      });
+      setSuccess(true);
+      setValues("");
+      setGoals("");
+      setProfiles({
+        linkedin: "",
+        twitter: "",
+        instagram: "",
+        tiktok: "",
+        onlyfans: "",
+      });
+      setStep(0);
+    } catch {
+      setError("Failed to save profile. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -37,6 +65,12 @@ export default function OnboardingForm() {
         <div className="text-sm text-gray-500 mb-2">
           Step {step + 1} of {steps.length}: {steps[step]}
         </div>
+        {success && (
+          <div className="mb-2 text-green-600">Profile saved successfully!</div>
+        )}
+        {error && (
+          <div className="mb-2 text-red-600">{error}</div>
+        )}
         {step === 0 && (
           <div>
             <label className="block mb-2 font-semibold">What are your core values?</label>
@@ -109,7 +143,7 @@ export default function OnboardingForm() {
           type="button"
           className="px-4 py-2 bg-gray-200 rounded"
           onClick={handleBack}
-          disabled={step === 0}
+          disabled={step === 0 || loading}
         >
           Back
         </button>
@@ -118,6 +152,7 @@ export default function OnboardingForm() {
             type="button"
             className="px-4 py-2 bg-blue-500 text-white rounded"
             onClick={handleNext}
+            disabled={loading}
           >
             Next
           </button>
@@ -125,8 +160,9 @@ export default function OnboardingForm() {
           <button
             type="submit"
             className="px-4 py-2 bg-green-500 text-white rounded"
+            disabled={loading}
           >
-            Submit
+            {loading ? "Saving..." : "Submit"}
           </button>
         )}
       </div>
