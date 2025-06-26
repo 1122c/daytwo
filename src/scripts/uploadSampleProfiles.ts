@@ -8,11 +8,16 @@ async function uploadProfiles() {
     try {
       await addDoc(collection(db, 'profiles'), profile);
       console.log(`Uploaded profile: ${profile.name}`);
-    } catch (err) {
-      console.error(`Failed to upload profile: ${profile.name}`, err);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error(`Failed to upload profile: ${profile.name}`, err.message);
+      } else {
+        console.error(`Failed to upload profile: ${profile.name}`, err);
+      }
     }
   }
   console.log('Done uploading sample profiles.');
+  process.exit(0);
 }
 
 uploadProfiles(); 

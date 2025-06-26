@@ -2,16 +2,26 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '@/services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
-import { simpleMatch } from '@/services/matchingService';
+import { simpleMatch, Profile } from '@/services/matchingService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const querySnapshot = await getDocs(collection(db, 'profiles'));
-    const profiles = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const profiles: Profile[] = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name || 'Anonymous',
+        values: Array.isArray(data.values) ? data.values : [],
+        goals: Array.isArray(data.goals) ? data.goals : [],
+        preferences: Array.isArray(data.preferences) ? data.preferences : [],
+        publicProfiles: typeof data.publicProfiles === 'object' && data.publicProfiles !== null ? data.publicProfiles : {},
+      };
+    });
     //may want to validate/shape profiles here
-    const matches = simpleMatch(profiles as any[]); // Type assertion for now
+    const matches = simpleMatch(profiles);
     res.status(200).json({ matches });
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Failed to generate matches' });
   }
 } 

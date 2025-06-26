@@ -1,12 +1,21 @@
 // NOTE: This is a simple matching algorithm for testing. In the future, make this more sophisticated (clustering, filtering, etc.).
-import type { Profile } from '@/app/discover/page';
+
+// Define Profile type locally to avoid import issues
+export interface Profile {
+  id: string;
+  name?: string;
+  values: string[];
+  goals: string[];
+  preferences: string[];
+  publicProfiles: Record<string, string>;
+}
 
 // Returns an array of pairs with a basic shared values count
 export function simpleMatch(profiles: Profile[]): { pair: [Profile, Profile], sharedValues: number }[] {
   const matches: { pair: [Profile, Profile], sharedValues: number }[] = [];
   for (let i = 0; i < profiles.length; i++) {
     for (let j = i + 1; j < profiles.length; j++) {
-      const shared = profiles[i].values.filter(v => profiles[j].values.includes(v)).length;
+      const shared = profiles[i].values.filter((v: string) => profiles[j].values.includes(v)).length;
       matches.push({ pair: [profiles[i], profiles[j]], sharedValues: shared });
     }
   }
