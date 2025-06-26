@@ -13,6 +13,14 @@ export default function DashboardPage() {
     values: '',
     goals: '',
     preferences: '',
+    communicationStyle: '',
+    interests: '',
+    connectionType: '',
+    growthAreas: '',
+    availability: '',
+    location: '',
+    timezone: '',
+    identityTags: '',
     publicProfiles: {
       linkedin: '',
       twitter: '',
@@ -54,6 +62,14 @@ export default function DashboardPage() {
             values: Array.isArray(data.values) ? data.values.join(', ') : data.values || '',
             goals: Array.isArray(data.goals) ? data.goals.join(', ') : data.goals || '',
             preferences: Array.isArray(data.preferences) ? data.preferences.join(', ') : data.preferences || '',
+            communicationStyle: Array.isArray(data.communicationStyle) ? data.communicationStyle.join(', ') : data.communicationStyle || '',
+            interests: Array.isArray(data.interests) ? data.interests.join(', ') : data.interests || '',
+            connectionType: Array.isArray(data.connectionType) ? data.connectionType.join(', ') : data.connectionType || '',
+            growthAreas: Array.isArray(data.growthAreas) ? data.growthAreas.join(', ') : data.growthAreas || '',
+            availability: Array.isArray(data.availability) ? data.availability.join(', ') : data.availability || '',
+            location: data.location || '',
+            timezone: data.timezone || '',
+            identityTags: Array.isArray(data.identityTags) ? data.identityTags.join(', ') : data.identityTags || '',
             publicProfiles: {
               linkedin: data.publicProfiles?.linkedin || '',
               twitter: data.publicProfiles?.twitter || '',
@@ -83,9 +99,17 @@ export default function DashboardPage() {
     try {
       await setDoc(doc(db, 'profiles', authUser.uid), {
         name: profile.name,
-        values: profile.values.split(',').map((v) => v.trim()).filter(Boolean),
-        goals: profile.goals.split(',').map((g) => g.trim()).filter(Boolean),
-        preferences: profile.preferences.split(',').map((p) => p.trim()).filter(Boolean),
+        values: profile.values ? profile.values.split(',').map((v) => v.trim()).filter(Boolean) : [],
+        goals: profile.goals ? profile.goals.split(',').map((g) => g.trim()).filter(Boolean) : [],
+        preferences: profile.preferences ? profile.preferences.split(',').map((p) => p.trim()).filter(Boolean) : [],
+        communicationStyle: profile.communicationStyle ? profile.communicationStyle.split(',').map((c) => c.trim()).filter(Boolean) : [],
+        interests: profile.interests ? profile.interests.split(',').map((i) => i.trim()).filter(Boolean) : [],
+        connectionType: profile.connectionType ? profile.connectionType.split(',').map((c) => c.trim()).filter(Boolean) : [],
+        growthAreas: profile.growthAreas ? profile.growthAreas.split(',').map((g) => g.trim()).filter(Boolean) : [],
+        availability: profile.availability ? profile.availability.split(',').map((a) => a.trim()).filter(Boolean) : [],
+        location: profile.location || '',
+        timezone: profile.timezone || '',
+        identityTags: profile.identityTags ? profile.identityTags.split(',').map((t) => t.trim()).filter(Boolean) : [],
         publicProfiles: profile.publicProfiles,
         uid: authUser.uid,
         updatedAt: new Date(),
@@ -147,12 +171,68 @@ export default function DashboardPage() {
             value={profile.goals}
             onChange={(e) => setProfile({ ...profile, goals: e.target.value })}
           />
-          <label className="block mb-2 font-semibold">Preferences (comma separated)</label>
+          <label className="block mb-2 font-semibold">Preferences (comma separated, optional)</label>
           <input
             className="w-full border rounded p-2 mb-4"
             type="text"
             value={profile.preferences}
             onChange={(e) => setProfile({ ...profile, preferences: e.target.value })}
+          />
+          <label className="block mb-2 font-semibold">Communication Style (comma separated, optional)</label>
+          <input
+            className="w-full border rounded p-2 mb-4"
+            type="text"
+            value={profile.communicationStyle}
+            onChange={(e) => setProfile({ ...profile, communicationStyle: e.target.value })}
+          />
+          <label className="block mb-2 font-semibold">Interests (comma separated, optional)</label>
+          <input
+            className="w-full border rounded p-2 mb-4"
+            type="text"
+            value={profile.interests}
+            onChange={(e) => setProfile({ ...profile, interests: e.target.value })}
+          />
+          <label className="block mb-2 font-semibold">Connection Type (comma separated, optional)</label>
+          <input
+            className="w-full border rounded p-2 mb-4"
+            type="text"
+            value={profile.connectionType}
+            onChange={(e) => setProfile({ ...profile, connectionType: e.target.value })}
+          />
+          <label className="block mb-2 font-semibold">Growth Areas (comma separated, optional)</label>
+          <input
+            className="w-full border rounded p-2 mb-4"
+            type="text"
+            value={profile.growthAreas}
+            onChange={(e) => setProfile({ ...profile, growthAreas: e.target.value })}
+          />
+          <label className="block mb-2 font-semibold">Availability (comma separated, optional)</label>
+          <input
+            className="w-full border rounded p-2 mb-4"
+            type="text"
+            value={profile.availability}
+            onChange={(e) => setProfile({ ...profile, availability: e.target.value })}
+          />
+          <label className="block mb-2 font-semibold">Location (optional)</label>
+          <input
+            className="w-full border rounded p-2 mb-4"
+            type="text"
+            value={profile.location}
+            onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+          />
+          <label className="block mb-2 font-semibold">Timezone (optional)</label>
+          <input
+            className="w-full border rounded p-2 mb-4"
+            type="text"
+            value={profile.timezone}
+            onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
+          />
+          <label className="block mb-2 font-semibold">Identity Tags (comma separated, optional)</label>
+          <input
+            className="w-full border rounded p-2 mb-4"
+            type="text"
+            value={profile.identityTags}
+            onChange={(e) => setProfile({ ...profile, identityTags: e.target.value })}
           />
           <label className="block mb-2 font-semibold">Public Profiles</label>
           <input

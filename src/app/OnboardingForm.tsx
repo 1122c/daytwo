@@ -4,12 +4,33 @@ import { db, auth } from "@/services/firebase";
 import { setDoc, doc } from "firebase/firestore";
 import { onAuthStateChanged, User } from "firebase/auth";
 
-const steps = ["Values", "Goals", "Public Profiles"];
+const steps = [
+  "Values",
+  "Goals",
+  "Preferences",
+  "Communication Style",
+  "Interests",
+  "Connection Type",
+  "Growth Areas",
+  "Availability",
+  "Location/Timezone",
+  "Identity Tags",
+  "Public Profiles"
+];
 
 export default function OnboardingForm() {
   const [step, setStep] = useState(0);
   const [values, setValues] = useState("");
   const [goals, setGoals] = useState("");
+  const [preferences, setPreferences] = useState("");
+  const [communicationStyle, setCommunicationStyle] = useState("");
+  const [interests, setInterests] = useState("");
+  const [connectionType, setConnectionType] = useState("");
+  const [growthAreas, setGrowthAreas] = useState("");
+  const [availability, setAvailability] = useState("");
+  const [location, setLocation] = useState("");
+  const [timezone, setTimezone] = useState("");
+  const [identityTags, setIdentityTags] = useState("");
   const [profiles, setProfiles] = useState({
     linkedin: "",
     twitter: "",
@@ -45,8 +66,17 @@ export default function OnboardingForm() {
     }
     try {
       await setDoc(doc(db, "profiles", user.uid), {
-        values,
-        goals,
+        values: values ? values.split(",").map((v) => v.trim()).filter(Boolean) : [],
+        goals: goals ? goals.split(",").map((g) => g.trim()).filter(Boolean) : [],
+        preferences: preferences ? preferences.split(",").map((p) => p.trim()).filter(Boolean) : [],
+        communicationStyle: communicationStyle ? communicationStyle.split(",").map((c) => c.trim()).filter(Boolean) : [],
+        interests: interests ? interests.split(",").map((i) => i.trim()).filter(Boolean) : [],
+        connectionType: connectionType ? connectionType.split(",").map((c) => c.trim()).filter(Boolean) : [],
+        growthAreas: growthAreas ? growthAreas.split(",").map((g) => g.trim()).filter(Boolean) : [],
+        availability: availability ? availability.split(",").map((a) => a.trim()).filter(Boolean) : [],
+        location: location || "",
+        timezone: timezone || "",
+        identityTags: identityTags ? identityTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
         publicProfiles: profiles,
         createdAt: new Date(),
         name: user.displayName || user.email || "",
@@ -55,6 +85,15 @@ export default function OnboardingForm() {
       setSuccess(true);
       setValues("");
       setGoals("");
+      setPreferences("");
+      setCommunicationStyle("");
+      setInterests("");
+      setConnectionType("");
+      setGrowthAreas("");
+      setAvailability("");
+      setLocation("");
+      setTimezone("");
+      setIdentityTags("");
       setProfiles({
         linkedin: "",
         twitter: "",
@@ -117,6 +156,119 @@ export default function OnboardingForm() {
           </div>
         )}
         {step === 2 && (
+          <div>
+            <label className="block mb-2 font-semibold">Preferences (comma separated, optional)</label>
+            <input
+              className="w-full border rounded p-2"
+              type="text"
+              placeholder="e.g. small group, remote"
+              value={preferences}
+              onChange={(e) => setPreferences(e.target.value)}
+              disabled={!user}
+            />
+          </div>
+        )}
+        {step === 3 && (
+          <div>
+            <label className="block mb-2 font-semibold">Communication Style (comma separated, optional)</label>
+            <input
+              className="w-full border rounded p-2"
+              type="text"
+              placeholder="e.g. direct, reflective, supportive"
+              value={communicationStyle}
+              onChange={(e) => setCommunicationStyle(e.target.value)}
+              disabled={!user}
+            />
+          </div>
+        )}
+        {step === 4 && (
+          <div>
+            <label className="block mb-2 font-semibold">Interests (comma separated, optional)</label>
+            <input
+              className="w-full border rounded p-2"
+              type="text"
+              placeholder="e.g. art, tech, outdoors"
+              value={interests}
+              onChange={(e) => setInterests(e.target.value)}
+              disabled={!user}
+            />
+          </div>
+        )}
+        {step === 5 && (
+          <div>
+            <label className="block mb-2 font-semibold">Connection Type (comma separated, optional)</label>
+            <input
+              className="w-full border rounded p-2"
+              type="text"
+              placeholder="e.g. mentorship, collaboration, friendship"
+              value={connectionType}
+              onChange={(e) => setConnectionType(e.target.value)}
+              disabled={!user}
+            />
+          </div>
+        )}
+        {step === 6 && (
+          <div>
+            <label className="block mb-2 font-semibold">Growth Areas (comma separated, optional)</label>
+            <input
+              className="w-full border rounded p-2"
+              type="text"
+              placeholder="e.g. leadership, public speaking"
+              value={growthAreas}
+              onChange={(e) => setGrowthAreas(e.target.value)}
+              disabled={!user}
+            />
+          </div>
+        )}
+        {step === 7 && (
+          <div>
+            <label className="block mb-2 font-semibold">Availability (comma separated, optional)</label>
+            <input
+              className="w-full border rounded p-2"
+              type="text"
+              placeholder="e.g. weekdays, evenings, weekends"
+              value={availability}
+              onChange={(e) => setAvailability(e.target.value)}
+              disabled={!user}
+            />
+          </div>
+        )}
+        {step === 8 && (
+          <div>
+            <label className="block mb-2 font-semibold">Location (optional)</label>
+            <input
+              className="w-full border rounded p-2"
+              type="text"
+              placeholder="e.g. New York, Remote"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              disabled={!user}
+            />
+            <label className="block mb-2 font-semibold mt-2">Timezone (optional)</label>
+            <input
+              className="w-full border rounded p-2"
+              type="text"
+              placeholder="e.g. EST, PST"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              disabled={!user}
+            />
+          </div>
+        )}
+        {step === 9 && (
+          <div>
+            <label className="block mb-2 font-semibold">Identity Tags (comma separated, optional)</label>
+            <input
+              className="w-full border rounded p-2"
+              type="text"
+              placeholder="e.g. LGBTQ+, Women in Tech, BIPOC"
+              value={identityTags}
+              onChange={(e) => setIdentityTags(e.target.value)}
+              disabled={!user}
+            />
+          </div>
+        )}
+        {step === 10 && (
           <div>
             <label className="block mb-2 font-semibold">Public Profiles (optional)</label>
             <input

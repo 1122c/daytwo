@@ -17,6 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         goals: Array.isArray(data.goals) ? data.goals : [],
         preferences: Array.isArray(data.preferences) ? data.preferences : [],
         publicProfiles: typeof data.publicProfiles === 'object' && data.publicProfiles !== null ? data.publicProfiles : {},
+        communicationStyle: Array.isArray(data.communicationStyle) ? data.communicationStyle : [],
+        interests: Array.isArray(data.interests) ? data.interests : [],
       };
     });
     // Parse query params for matching options
@@ -24,11 +26,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const minSharedGoals = req.query.minSharedGoals ? parseInt(req.query.minSharedGoals as string, 10) : undefined;
     const minSharedPreferences = req.query.minSharedPreferences ? parseInt(req.query.minSharedPreferences as string, 10) : undefined;
     const groupSize = req.query.groupSize ? parseInt(req.query.groupSize as string, 10) as 2 | 3 : undefined;
+    const minSharedInterests = req.query.minSharedInterests ? parseInt(req.query.minSharedInterests as string, 10) : 0;
     const matches = flexibleMatch(profiles, {
       minSharedValues,
       minSharedGoals,
       minSharedPreferences,
       groupSize,
+      minSharedInterests,
     });
     res.status(200).json({ matches });
   } catch {
