@@ -5,8 +5,21 @@ import { db } from '@/services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { flexibleMatch, Profile } from '@/services/matchingService';
 import { generateMatchExplanation } from '@/services/websocketService';
+import { adminAuth } from '@/services/firebaseAdmin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Auth check
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: Missing token' });
+  }
+  const idToken = authHeader.split('Bearer ')[1];
+  try {
+    await adminAuth.verifyIdToken(idToken);
+  } catch {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+
   try {
     const querySnapshot = await getDocs(collection(db, 'profiles'));
     const profiles: Profile[] = querySnapshot.docs.map(doc => {

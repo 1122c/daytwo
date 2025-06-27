@@ -1,8 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { adminAuth } from '@/services/firebaseAdmin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Auth check
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: Missing token' });
+  }
+  const idToken = authHeader.split('Bearer ')[1];
+  try {
+    await adminAuth.verifyIdToken(idToken);
+  } catch {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
 
   const { userProfile, matchProfile } = req.body;
@@ -42,7 +55,7 @@ Format each activity on a new line.`;
     if (!data.result) throw new Error('No result from OpenAI');
     const activities = data.result.split('\n').filter(Boolean);
     res.status(200).json({ activities });
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Failed to generate ice breakers' });
   }
 } 

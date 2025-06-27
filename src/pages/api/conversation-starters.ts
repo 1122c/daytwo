@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { OpenAI } from 'openai';
+import { adminAuth } from '@/services/firebaseAdmin';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -9,6 +10,18 @@ const openai = new OpenAI({
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Auth check
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: Missing token' });
+  }
+  const idToken = authHeader.split('Bearer ')[1];
+  try {
+    await adminAuth.verifyIdToken(idToken);
+  } catch {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
 
   const { userProfile, matchProfile } = req.body;
