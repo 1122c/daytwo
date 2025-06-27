@@ -6,6 +6,8 @@ import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import React from 'react';
+import type { UserProfile } from '@/services/websocketService';
 
 export default function DashboardPage() {
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
@@ -28,7 +30,7 @@ export default function DashboardPage() {
       instagram: '',
       tiktok: '',
       onlyfans: '',
-    },
+    } as UserProfile['publicProfiles'],
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,6 +41,10 @@ export default function DashboardPage() {
   const [promptLoading, setPromptLoading] = useState(false);
   const [prompts, setPrompts] = useState<string[]>([]);
   const [promptError, setPromptError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
 
   // Auth check with improved logic
   useEffect(() => {
@@ -236,6 +242,29 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleUserSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setSearchLoading(true);
+    setSearchError('');
+    setSearchResults([]);
+    try {
+      if (!authUser) throw new Error('Not authenticated');
+      const idToken = await authUser.getIdToken();
+      const res = await fetch(`/api/searchUsers?query=${encodeURIComponent(searchQuery)}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+      if (!res.ok) throw new Error('Failed to search users');
+      const data = await res.json();
+      setSearchResults(data.users || []);
+    } catch {
+      setSearchError('Error searching users.');
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
   // Show loading while checking auth or loading profile
   if (!authChecked || (authUser && loading)) {
     return (
@@ -276,6 +305,61 @@ export default function DashboardPage() {
         </button>
       </nav>
       <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-8 flex flex-col items-center">
+        {/* User Search Bar */}
+        <div className="mb-8 p-4 bg-white rounded shadow">
+          <form onSubmit={handleUserSearch} className="flex flex-col sm:flex-row gap-2 items-center">
+            <input
+              type="text"
+              className="border rounded px-3 py-2 w-full sm:w-64"
+              placeholder="Search users by name, value, goal, or preference..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+            <button
+              type="submit"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              disabled={searchLoading || !searchQuery.trim()}
+            >
+              {searchLoading ? 'Searching...' : 'Search'}
+            </button>
+          </form>
+          {searchError && <div className="text-red-600 mt-2">{searchError}</div>}
+          {searchResults.length > 0 && (
+            <div className="mt-4">
+              <h3 className="font-semibold mb-2">Results:</h3>
+              <ul className="space-y-4">
+                {searchResults.map((user) => (
+                  <li key={user.id} className="border rounded p-3 bg-gray-50">
+                    <div className="font-bold text-lg">{user.name}</div>
+                    <div><span className="font-semibold">Values:</span> {user.values?.join(', ')}</div>
+                    <div><span className="font-semibold">Goals:</span> {user.goals?.join(', ')}</div>
+                    <div><span className="font-semibold">Preferences:</span> {user.preferences?.join(', ')}</div>
+                    {user.publicProfiles?.linkedin && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        <a href={user.publicProfiles?.linkedin} target="_blank" rel="noopener noreferrer" className="mr-2 underline">LinkedIn</a>
+                      </div>
+                    )}
+                    {user.publicProfiles?.twitter && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        <a href={user.publicProfiles?.twitter} target="_blank" rel="noopener noreferrer" className="mr-2 underline">Twitter</a>
+                      </div>
+                    )}
+                    {user.publicProfiles?.instagram && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        <a href={user.publicProfiles?.instagram} target="_blank" rel="noopener noreferrer" className="mr-2 underline">Instagram</a>
+                      </div>
+                    )}
+                    {user.publicProfiles?.tiktok && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        <a href={user.publicProfiles?.tiktok} target="_blank" rel="noopener noreferrer" className="mr-2 underline">TikTok</a>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
         {/* Profile Picture and Name */}
         <div className="flex flex-col items-center mb-6">
           <div className="relative w-24 h-24 mb-2">
@@ -450,7 +534,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-2"
             type="url"
             placeholder="LinkedIn URL"
-            value={profile.publicProfiles.linkedin}
+            value={profile.publicProfiles?.linkedin}
             onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, linkedin: e.target.value } })}
           />
           <label className="block mb-2 font-semibold">Twitter URL</label>
@@ -458,7 +542,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-2"
             type="url"
             placeholder="Twitter URL"
-            value={profile.publicProfiles.twitter}
+            value={profile.publicProfiles?.twitter}
             onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, twitter: e.target.value } })}
           />
           <label className="block mb-2 font-semibold">Instagram URL</label>
@@ -466,7 +550,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-2"
             type="url"
             placeholder="Instagram URL"
-            value={profile.publicProfiles.instagram}
+            value={profile.publicProfiles?.instagram}
             onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, instagram: e.target.value } })}
           />
           <label className="block mb-2 font-semibold">TikTok URL</label>
@@ -474,7 +558,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-2"
             type="url"
             placeholder="TikTok URL"
-            value={profile.publicProfiles.tiktok}
+            value={profile.publicProfiles?.tiktok}
             onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, tiktok: e.target.value } })}
           />
           <label className="block mb-2 font-semibold">OnlyFans URL</label>
@@ -482,7 +566,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-4"
             type="url"
             placeholder="OnlyFans URL"
-            value={profile.publicProfiles.onlyfans}
+            value={profile.publicProfiles?.onlyfans}
             onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, onlyfans: e.target.value } })}
           />
           <button
