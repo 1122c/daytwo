@@ -37,6 +37,16 @@ export default function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // New state for AI suggestions
+  const [starters, setStarters] = useState<Record<number, string[]>>({});
+  const [startersLoading, setStartersLoading] = useState<Record<number, boolean>>({});
+  const [startersError, setStartersError] = useState<Record<number, string>>({});
+  const [iceBreakers, setIceBreakers] = useState<Record<number, string[]>>({});
+  const [iceBreakersLoading, setIceBreakersLoading] = useState<Record<number, boolean>>({});
+  const [iceBreakersError, setIceBreakersError] = useState<Record<number, string>>({});
+  const [growthSuggestions, setGrowthSuggestions] = useState<Record<number, string[]>>({});
+  const [growthLoading, setGrowthLoading] = useState<Record<number, boolean>>({});
+  const [growthError, setGrowthError] = useState<Record<number, string>>({});
 
   useEffect(() => {
     async function fetchMatches() {
@@ -54,6 +64,80 @@ export default function MatchesPage() {
     }
     fetchMatches();
   }, []);
+
+  // Helper to get the first two profiles in a match group
+  function getPair(match: Match) {
+    return match.group.length >= 2 ? [match.group[0], match.group[1]] : [match.group[0], match.group[0]];
+  }
+
+  async function handleFetchStarters(i: number, match: Match) {
+    setStartersLoading((prev) => ({ ...prev, [i]: true }));
+    setStartersError((prev) => ({ ...prev, [i]: "" }));
+    const [userProfile, matchProfile] = getPair(match);
+    try {
+      const res = await fetch("/api/conversation-starters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userProfile, matchProfile }),
+      });
+      const data = await res.json();
+      if (data.starters) {
+        setStarters((prev) => ({ ...prev, [i]: data.starters }));
+      } else {
+        setStartersError((prev) => ({ ...prev, [i]: "No starters found." }));
+      }
+    } catch {
+      setStartersError((prev) => ({ ...prev, [i]: "Failed to fetch conversation starters." }));
+    } finally {
+      setStartersLoading((prev) => ({ ...prev, [i]: false }));
+    }
+  }
+
+  async function handleFetchIceBreakers(i: number, match: Match) {
+    setIceBreakersLoading((prev) => ({ ...prev, [i]: true }));
+    setIceBreakersError((prev) => ({ ...prev, [i]: "" }));
+    const [userProfile, matchProfile] = getPair(match);
+    try {
+      const res = await fetch("/api/ice-breakers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userProfile, matchProfile }),
+      });
+      const data = await res.json();
+      if (data.activities) {
+        setIceBreakers((prev) => ({ ...prev, [i]: data.activities }));
+      } else {
+        setIceBreakersError((prev) => ({ ...prev, [i]: "No ice breakers found." }));
+      }
+    } catch {
+      setIceBreakersError((prev) => ({ ...prev, [i]: "Failed to fetch ice breakers." }));
+    } finally {
+      setIceBreakersLoading((prev) => ({ ...prev, [i]: false }));
+    }
+  }
+
+  async function handleFetchGrowthSuggestions(i: number, match: Match) {
+    setGrowthLoading((prev) => ({ ...prev, [i]: true }));
+    setGrowthError((prev) => ({ ...prev, [i]: "" }));
+    const [userProfile, matchProfile] = getPair(match);
+    try {
+      const res = await fetch("/api/growth-suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userProfile, matchProfile }),
+      });
+      const data = await res.json();
+      if (data.suggestions) {
+        setGrowthSuggestions((prev) => ({ ...prev, [i]: data.suggestions }));
+      } else {
+        setGrowthError((prev) => ({ ...prev, [i]: "No suggestions found." }));
+      }
+    } catch {
+      setGrowthError((prev) => ({ ...prev, [i]: "Failed to fetch growth suggestions." }));
+    } finally {
+      setGrowthLoading((prev) => ({ ...prev, [i]: false }));
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-10">
@@ -101,6 +185,49 @@ export default function MatchesPage() {
                   <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-900 rounded">
                     <span className="font-semibold">Why you matched:</span> {match.explanation}
                   </div>
+                )}
+                {/* AI Suggestions Buttons and Results */}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    className="px-3 py-1 bg-blue-500 text-white rounded text-sm disabled:opacity-50"
+                    onClick={() => handleFetchStarters(i, match)}
+                    disabled={startersLoading[i]}
+                  >
+                    {startersLoading[i] ? "Loading..." : "Show Conversation Starters"}
+                  </button>
+                  <button
+                    className="px-3 py-1 bg-green-500 text-white rounded text-sm disabled:opacity-50"
+                    onClick={() => handleFetchIceBreakers(i, match)}
+                    disabled={iceBreakersLoading[i]}
+                  >
+                    {iceBreakersLoading[i] ? "Loading..." : "Show Ice Breakers"}
+                  </button>
+                  <button
+                    className="px-3 py-1 bg-purple-500 text-white rounded text-sm disabled:opacity-50"
+                    onClick={() => handleFetchGrowthSuggestions(i, match)}
+                    disabled={growthLoading[i]}
+                  >
+                    {growthLoading[i] ? "Loading..." : "Show Growth Suggestions"}
+                  </button>
+                </div>
+                {/* Results */}
+                {startersError[i] && <div className="text-red-600 text-sm mt-2">{startersError[i]}</div>}
+                {starters[i] && (
+                  <ul className="mt-2 text-sm bg-blue-50 rounded p-2">
+                    {starters[i].map((s, idx) => <li key={idx}>💬 {s}</li>)}
+                  </ul>
+                )}
+                {iceBreakersError[i] && <div className="text-red-600 text-sm mt-2">{iceBreakersError[i]}</div>}
+                {iceBreakers[i] && (
+                  <ul className="mt-2 text-sm bg-green-50 rounded p-2">
+                    {iceBreakers[i].map((s, idx) => <li key={idx}>🎲 {s}</li>)}
+                  </ul>
+                )}
+                {growthError[i] && <div className="text-red-600 text-sm mt-2">{growthError[i]}</div>}
+                {growthSuggestions[i] && (
+                  <ul className="mt-2 text-sm bg-purple-50 rounded p-2">
+                    {growthSuggestions[i].map((s, idx) => <li key={idx}>🌱 {s}</li>)}
+                  </ul>
                 )}
               </div>
             ))}
