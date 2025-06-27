@@ -4,6 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '@/services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { flexibleMatch, Profile } from '@/services/matchingService';
+import { generateMatchExplanation } from '@/services/websocketService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -34,7 +35,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       groupSize,
       minSharedInterests,
     });
-    res.status(200).json({ matches });
+    // Add GPT explanations for the top 10 matches
+    const matchesWithExplanations = await Promise.all(
+      matches.slice(0, 10).map(async (match) => {
+        // Ensure name is always a string for GPT
+        const groupWithNames = match.group.map((p) => ({ ...p, name: p.name || 'Anonymous' }));
+        const explanation = await generateMatchExplanation(groupWithNames);
+        return { ...match, explanation };
+      })
+    );
+    // For the rest, just return without explanation
+    const rest = matches.slice(10).map((match) => ({ ...match, explanation: null }));
+    res.status(200).json({ matches: [...matchesWithExplanations, ...rest] });
   } catch {
     res.status(500).json({ error: 'Failed to generate matches' });
   }

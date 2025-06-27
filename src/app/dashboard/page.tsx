@@ -33,20 +33,26 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [authChecked, setAuthChecked] = useState(false);
   const router = useRouter();
 
-  // Auth check
+  // Auth check with improved logic
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
-      if (!user) {
-        router.replace('/login');
+      setAuthChecked(true);
+      
+      // Only redirect if we're sure there's no user and auth check is complete
+      if (!user && authChecked) {
+        console.log('No user found, redirecting to login');
+        router.push('/login');
       }
     });
+    
     return () => unsubscribe();
-  }, [router]);
+  }, [router, authChecked]);
 
-  // Fetch profile
+  // Fetch profile - only run when we have a confirmed user
   useEffect(() => {
     async function fetchProfile(uid: string) {
       setLoading(true);
@@ -78,17 +84,24 @@ export default function DashboardPage() {
               onlyfans: data.publicProfiles?.onlyfans || '',
             },
           });
+        } else {
+          console.log('No profile found for user, showing empty form');
         }
-      } catch {
+      } catch (err) {
+        console.error('Error fetching profile:', err);
         setError('Failed to load profile.');
       } finally {
         setLoading(false);
       }
     }
-    if (authUser && authUser.uid) {
+    
+    // Only fetch profile if we have a confirmed authenticated user
+    if (authUser && authUser.uid && authChecked) {
       fetchProfile(authUser.uid);
+    } else if (authChecked && !authUser) {
+      setLoading(false);
     }
-  }, [authUser]);
+  }, [authUser, authChecked]);
 
   // Example chips for each field
   const EXAMPLES = {
@@ -116,11 +129,17 @@ export default function DashboardPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!authUser) return;
+    if (!authUser) {
+      setError('You must be logged in to save your profile.');
+      return;
+    }
+    
     setSaving(true);
     setError('');
     setSuccess(false);
+    
     try {
+      console.log('Saving profile for user:', authUser.uid);
       await setDoc(doc(db, 'profiles', authUser.uid), {
         name: profile.name,
         values: profile.values ? profile.values.split(',').map((v) => v.trim().toLowerCase()).filter(Boolean) : [],
@@ -138,15 +157,19 @@ export default function DashboardPage() {
         uid: authUser.uid,
         updatedAt: new Date(),
       }, { merge: true });
+      
       setSuccess(true);
-    } catch {
+      console.log('Profile saved successfully');
+    } catch (err) {
+      console.error('Error saving profile:', err);
       setError('Failed to update profile.');
     } finally {
       setSaving(false);
     }
   }
 
-  if (authUser === undefined || loading) {
+  // Show loading while checking auth or loading profile
+  if (!authChecked || (authUser && loading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-gray-500 text-lg">Loading...</div>
@@ -154,9 +177,13 @@ export default function DashboardPage() {
     );
   }
 
+  // If no user after auth check is complete, don't render anything (redirect will happen)
   if (!authUser) {
-    // Redirect handled in useEffect
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-500 text-lg">Redirecting to login...</div>
+      </div>
+    );
   }
 
   return (
@@ -364,4 +391,4 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-} 
+}

@@ -29,6 +29,8 @@ interface Match {
   sharedGrowthAreas: number;
   sharedAvailability: number;
   sharedIdentityTags: number;
+  complementaryConnectionType: number;
+  explanation?: string | null;
 }
 
 export default function MatchesPage() {
@@ -91,7 +93,15 @@ export default function MatchesPage() {
                   <span className="font-medium">Shared Growth Areas:</span> {match.sharedGrowthAreas} | 
                   <span className="font-medium">Shared Availability:</span> {match.sharedAvailability} | 
                   <span className="font-medium">Shared Identity Tags:</span> {match.sharedIdentityTags}
+                  {match.complementaryConnectionType > 0 && (
+                    <span className="ml-2 inline-block px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-semibold align-middle">Complementary Match (e.g. mentor/mentee)</span>
+                  )}
                 </div>
+                {match.explanation && (
+                  <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-900 rounded">
+                    <span className="font-semibold">Why you matched:</span> {match.explanation}
+                  </div>
+                )}
               </div>
             ))}
           </div>

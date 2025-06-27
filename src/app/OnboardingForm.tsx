@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { db, auth } from "@/services/firebase";
 import { setDoc, doc } from "firebase/firestore";
 import { onAuthStateChanged, User } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 const steps = [
   "Values",
@@ -55,6 +56,7 @@ export default function OnboardingForm() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
@@ -108,25 +110,9 @@ export default function OnboardingForm() {
         uid: user.uid,
       });
       setSuccess(true);
-      setValues("");
-      setGoals("");
-      setPreferences("");
-      setCommunicationStyle("");
-      setInterests("");
-      setConnectionType("");
-      setGrowthAreas("");
-      setAvailability("");
-      setLocation("");
-      setTimezone("");
-      setIdentityTags("");
-      setProfiles({
-        linkedin: "",
-        twitter: "",
-        instagram: "",
-        tiktok: "",
-        onlyfans: "",
-      });
-      setStep(0);
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 1200);
     } catch {
       setError("Failed to save profile. Please try again.");
     } finally {

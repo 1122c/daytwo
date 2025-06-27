@@ -31,6 +31,43 @@ export interface MatchOptions {
   groupSize?: 2 | 3; // 2 = pairs, 3 = groups of 3
 }
 
+// Synonym map for normalization
+const SYNONYMS: Record<string, string> = {
+  mentorship: 'mentor',
+  mentor: 'mentor',
+  mentee: 'mentee',
+  collaboration: 'collaborate',
+  collaborate: 'collaborate',
+  friendship: 'friend',
+  friend: 'friend',
+  lgbtq: 'lgbtq+',
+  'lgbtq+': 'lgbtq+',
+  // Add more as needed
+};
+
+function normalizeArr(arr: string[] = []): string[] {
+  return arr.map((v) => SYNONYMS[v.trim().toLowerCase()] || v.trim().toLowerCase()).filter(Boolean);
+}
+
+// Configurable complementary fields
+const COMPLEMENTARY_FIELDS: Record<string, [string, string][]> = {
+  connectionType: [
+    ['mentor', 'mentee'],
+    ['mentee', 'mentor'],
+    // Add more complementary pairs as needed
+  ],
+  // Add more fields if needed
+};
+
+function countComplementary(arr1: string[] = [], arr2: string[] = [], field: string): number {
+  const pairs = COMPLEMENTARY_FIELDS[field] || [];
+  let count = 0;
+  for (const [a, b] of pairs) {
+    if (arr1.includes(a) && arr2.includes(b)) count++;
+  }
+  return count;
+}
+
 /**
  * Flexible matching function. Returns pairs or groups of profiles that meet the criteria.
  * All fields are optional; a match can occur in any area if the minimum is met.
@@ -49,6 +86,7 @@ export function flexibleMatch(
   sharedGrowthAreas: number;
   sharedAvailability: number;
   sharedIdentityTags: number;
+  complementaryConnectionType: number;
 }[] {
   const {
     minSharedValues = 1,
@@ -73,40 +111,57 @@ export function flexibleMatch(
     sharedGrowthAreas: number;
     sharedAvailability: number;
     sharedIdentityTags: number;
+    complementaryConnectionType: number;
   }[] = [];
 
-  // Helper to count shared items
+  // Normalize all profiles before matching
+  const normProfiles = profiles.map((p) => ({
+    ...p,
+    values: normalizeArr(p.values),
+    goals: normalizeArr(p.goals),
+    preferences: normalizeArr(p.preferences),
+    communicationStyle: normalizeArr(p.communicationStyle),
+    interests: normalizeArr(p.interests),
+    connectionType: normalizeArr(p.connectionType),
+    growthAreas: normalizeArr(p.growthAreas),
+    availability: normalizeArr(p.availability),
+    identityTags: normalizeArr(p.identityTags),
+  }));
+
   function countShared(arr1: string[] = [], arr2: string[] = []) {
     return arr1.filter((v) => arr2.includes(v)).length;
   }
 
-  // Pairwise or groupwise matching
   if (groupSize === 2) {
-    for (let i = 0; i < profiles.length; i++) {
-      for (let j = i + 1; j < profiles.length; j++) {
-        const sharedValues = countShared(profiles[i].values, profiles[j].values);
-        const sharedGoals = countShared(profiles[i].goals, profiles[j].goals);
-        const sharedPreferences = countShared(profiles[i].preferences, profiles[j].preferences);
-        const sharedInterests = countShared(profiles[i].interests, profiles[j].interests);
-        const sharedCommunicationStyle = countShared(profiles[i].communicationStyle, profiles[j].communicationStyle);
-        const sharedConnectionType = countShared(profiles[i].connectionType, profiles[j].connectionType);
-        const sharedGrowthAreas = countShared(profiles[i].growthAreas, profiles[j].growthAreas);
-        const sharedAvailability = countShared(profiles[i].availability, profiles[j].availability);
-        const sharedIdentityTags = countShared(profiles[i].identityTags, profiles[j].identityTags);
-        // Only require that at least one of the criteria is met
+    for (let i = 0; i < normProfiles.length; i++) {
+      for (let j = i + 1; j < normProfiles.length; j++) {
+        const a = normProfiles[i];
+        const b = normProfiles[j];
+        const sharedValues = countShared(a.values, b.values);
+        const sharedGoals = countShared(a.goals, b.goals);
+        const sharedPreferences = countShared(a.preferences, b.preferences);
+        const sharedInterests = countShared(a.interests, b.interests);
+        const sharedCommunicationStyle = countShared(a.communicationStyle, b.communicationStyle);
+        const sharedConnectionType = countShared(a.connectionType, b.connectionType);
+        const sharedGrowthAreas = countShared(a.growthAreas, b.growthAreas);
+        const sharedAvailability = countShared(a.availability, b.availability);
+        const sharedIdentityTags = countShared(a.identityTags, b.identityTags);
+        // Complementary logic (example: mentor/mentee)
+        const complementaryConnectionType = countComplementary(a.connectionType, b.connectionType, 'connectionType') + countComplementary(b.connectionType, a.connectionType, 'connectionType');
         if (
-          (sharedValues >= minSharedValues ||
-            sharedGoals >= minSharedGoals ||
-            sharedPreferences >= minSharedPreferences ||
-            sharedInterests >= minSharedInterests ||
-            sharedCommunicationStyle >= minSharedCommunicationStyle ||
-            sharedConnectionType >= minSharedConnectionType ||
-            sharedGrowthAreas >= minSharedGrowthAreas ||
-            sharedAvailability >= minSharedAvailability ||
-            sharedIdentityTags >= minSharedIdentityTags)
+          sharedValues >= minSharedValues ||
+          sharedGoals >= minSharedGoals ||
+          sharedPreferences >= minSharedPreferences ||
+          sharedInterests >= minSharedInterests ||
+          sharedCommunicationStyle >= minSharedCommunicationStyle ||
+          sharedConnectionType >= minSharedConnectionType ||
+          sharedGrowthAreas >= minSharedGrowthAreas ||
+          sharedAvailability >= minSharedAvailability ||
+          sharedIdentityTags >= minSharedIdentityTags ||
+          complementaryConnectionType > 0
         ) {
           matches.push({
-            group: [profiles[i], profiles[j]],
+            group: [profiles[i], profiles[j]], // Return original profiles for display
             sharedValues,
             sharedGoals,
             sharedPreferences,
@@ -116,50 +171,28 @@ export function flexibleMatch(
             sharedGrowthAreas,
             sharedAvailability,
             sharedIdentityTags,
+            complementaryConnectionType,
           });
         }
       }
     }
   } else if (groupSize === 3) {
-    for (let i = 0; i < profiles.length; i++) {
-      for (let j = i + 1; j < profiles.length; j++) {
-        for (let k = j + 1; k < profiles.length; k++) {
-          const sharedValues =
-            countShared(profiles[i].values, profiles[j].values) +
-            countShared(profiles[i].values, profiles[k].values) +
-            countShared(profiles[j].values, profiles[k].values);
-          const sharedGoals =
-            countShared(profiles[i].goals, profiles[j].goals) +
-            countShared(profiles[i].goals, profiles[k].goals) +
-            countShared(profiles[j].goals, profiles[k].goals);
-          const sharedPreferences =
-            countShared(profiles[i].preferences, profiles[j].preferences) +
-            countShared(profiles[i].preferences, profiles[k].preferences) +
-            countShared(profiles[j].preferences, profiles[k].preferences);
-          const sharedInterests =
-            countShared(profiles[i].interests, profiles[j].interests) +
-            countShared(profiles[i].interests, profiles[k].interests) +
-            countShared(profiles[j].interests, profiles[k].interests);
-          const sharedCommunicationStyle =
-            countShared(profiles[i].communicationStyle, profiles[j].communicationStyle) +
-            countShared(profiles[i].communicationStyle, profiles[k].communicationStyle) +
-            countShared(profiles[j].communicationStyle, profiles[k].communicationStyle);
-          const sharedConnectionType =
-            countShared(profiles[i].connectionType, profiles[j].connectionType) +
-            countShared(profiles[i].connectionType, profiles[k].connectionType) +
-            countShared(profiles[j].connectionType, profiles[k].connectionType);
-          const sharedGrowthAreas =
-            countShared(profiles[i].growthAreas, profiles[j].growthAreas) +
-            countShared(profiles[i].growthAreas, profiles[k].growthAreas) +
-            countShared(profiles[j].growthAreas, profiles[k].growthAreas);
-          const sharedAvailability =
-            countShared(profiles[i].availability, profiles[j].availability) +
-            countShared(profiles[i].availability, profiles[k].availability) +
-            countShared(profiles[j].availability, profiles[k].availability);
-          const sharedIdentityTags =
-            countShared(profiles[i].identityTags, profiles[j].identityTags) +
-            countShared(profiles[i].identityTags, profiles[k].identityTags) +
-            countShared(profiles[j].identityTags, profiles[k].identityTags);
+    // (For brevity, only implement complementary logic for pairs)
+    for (let i = 0; i < normProfiles.length; i++) {
+      for (let j = i + 1; j < normProfiles.length; j++) {
+        for (let k = j + 1; k < normProfiles.length; k++) {
+          const a = normProfiles[i];
+          const b = normProfiles[j];
+          const c = normProfiles[k];
+          const sharedValues = countShared(a.values, b.values) + countShared(a.values, c.values) + countShared(b.values, c.values);
+          const sharedGoals = countShared(a.goals, b.goals) + countShared(a.goals, c.goals) + countShared(b.goals, c.goals);
+          const sharedPreferences = countShared(a.preferences, b.preferences) + countShared(a.preferences, c.preferences) + countShared(b.preferences, c.preferences);
+          const sharedInterests = countShared(a.interests, b.interests) + countShared(a.interests, c.interests) + countShared(b.interests, c.interests);
+          const sharedCommunicationStyle = countShared(a.communicationStyle, b.communicationStyle) + countShared(a.communicationStyle, c.communicationStyle) + countShared(b.communicationStyle, c.communicationStyle);
+          const sharedConnectionType = countShared(a.connectionType, b.connectionType) + countShared(a.connectionType, c.connectionType) + countShared(b.connectionType, c.connectionType);
+          const sharedGrowthAreas = countShared(a.growthAreas, b.growthAreas) + countShared(a.growthAreas, c.growthAreas) + countShared(b.growthAreas, c.growthAreas);
+          const sharedAvailability = countShared(a.availability, b.availability) + countShared(a.availability, c.availability) + countShared(b.availability, c.availability);
+          const sharedIdentityTags = countShared(a.identityTags, b.identityTags) + countShared(a.identityTags, c.identityTags) + countShared(b.identityTags, c.identityTags);
           if (
             sharedValues >= minSharedValues * 3 ||
             sharedGoals >= minSharedGoals * 3 ||
@@ -182,13 +215,14 @@ export function flexibleMatch(
               sharedGrowthAreas,
               sharedAvailability,
               sharedIdentityTags,
+              complementaryConnectionType: 0, // Not calculated for groups
             });
           }
         }
       }
     }
   }
-  // Sort by most shared values, then goals, then preferences, then interests, etc.
+  // Sort by most shared values, then goals, then preferences, then interests, etc., then complementary
   matches.sort((a, b) =>
     b.sharedValues - a.sharedValues ||
     b.sharedGoals - a.sharedGoals ||
@@ -198,7 +232,8 @@ export function flexibleMatch(
     b.sharedConnectionType - a.sharedConnectionType ||
     b.sharedGrowthAreas - a.sharedGrowthAreas ||
     b.sharedAvailability - a.sharedAvailability ||
-    b.sharedIdentityTags - a.sharedIdentityTags
+    b.sharedIdentityTags - a.sharedIdentityTags ||
+    b.complementaryConnectionType - a.complementaryConnectionType
   );
   return matches;
 }
