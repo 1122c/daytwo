@@ -1,11 +1,11 @@
 "use client";
 import React, { useState } from "react";
 import { auth } from "@/services/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,10 +17,10 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(auth, email, password);
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Login failed");
+      setError(err.message || "Sign up failed");
     } finally {
       setLoading(false);
     }
@@ -29,7 +29,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-sm flex flex-col items-center">
-        <h1 className="text-2xl font-bold mb-4">Login to day one</h1>
+        <h1 className="text-2xl font-bold mb-4">Sign Up for day one</h1>
         {error && <div className="mb-2 text-red-600 text-center">{error}</div>}
         <form className="w-full" onSubmit={handleSubmit}>
           <input
@@ -50,14 +50,14 @@ export default function LoginPage() {
           />
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white py-2 rounded mb-2"
+            className="w-full bg-green-500 text-white py-2 rounded mb-2"
             disabled={loading}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading ? "Signing up..." : "Sign Up"}
           </button>
         </form>
-        <Link href="/signup" className="w-full mb-2">
-          <button className="w-full text-green-600 underline py-2">Sign Up</button>
+        <Link href="/login" className="w-full mb-2">
+          <button className="w-full text-blue-600 underline py-2">Login</button>
         </Link>
         <Link href="/password-recovery" className="w-full">
           <button className="w-full text-blue-600 underline py-2">Forgot password?</button>
