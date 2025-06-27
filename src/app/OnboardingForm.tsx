@@ -82,43 +82,54 @@ export default function OnboardingForm() {
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess(false);
-    if (!user) {
-      setError("You must be logged in to submit your profile.");
-      setLoading(false);
-      return;
-    }
-    try {
-      await setDoc(doc(db, "profiles", user.uid), {
-        values: values ? values.split(",").map((v) => v.trim().toLowerCase()).filter(Boolean) : [],
-        goals: goals ? goals.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
-        preferences: preferences ? preferences.split(",").map((p) => p.trim().toLowerCase()).filter(Boolean) : [],
-        communicationStyle: communicationStyle ? communicationStyle.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [],
-        interests: interests ? interests.split(",").map((i) => i.trim().toLowerCase()).filter(Boolean) : [],
-        connectionType: connectionType ? connectionType.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [],
-        growthAreas: growthAreas ? growthAreas.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
-        availability: availability ? availability.split(",").map((a) => a.trim().toLowerCase()).filter(Boolean) : [],
-        location: location ? location.trim() : "",
-        timezone: timezone ? timezone.trim() : "",
-        identityTags: identityTags ? identityTags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean) : [],
-        publicProfiles: profiles,
-        createdAt: new Date(),
-        name: user.displayName || user.email || "",
-        uid: user.uid,
-      });
-      setSuccess(true);
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1200);
-    } catch {
-      setError("Failed to save profile. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+  e.preventDefault();
+  console.log('🚀 Form submitted!'); // Debug log
+  setLoading(true);
+  setError("");
+  setSuccess(false);
+  if (!user) {
+    setError("You must be logged in to submit your profile.");
+    setLoading(false);
+    return;
   }
+  
+  console.log('✅ User authenticated:', user.uid); // Debug log
+  
+  try {
+    console.log('💾 Saving profile to Firestore...'); // Debug log
+    await setDoc(doc(db, "profiles", user.uid), {
+      values: values ? values.split(",").map((v) => v.trim().toLowerCase()).filter(Boolean) : [],
+      goals: goals ? goals.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
+      preferences: preferences ? preferences.split(",").map((p) => p.trim().toLowerCase()).filter(Boolean) : [],
+      communicationStyle: communicationStyle ? communicationStyle.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [],
+      interests: interests ? interests.split(",").map((i) => i.trim().toLowerCase()).filter(Boolean) : [],
+      connectionType: connectionType ? connectionType.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [],
+      growthAreas: growthAreas ? growthAreas.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
+      availability: availability ? availability.split(",").map((a) => a.trim().toLowerCase()).filter(Boolean) : [],
+      location: location ? location.trim() : "",
+      timezone: timezone ? timezone.trim() : "",
+      identityTags: identityTags ? identityTags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean) : [],
+      publicProfiles: profiles,
+      createdAt: new Date(),
+      name: user.displayName || user.email || "",
+      uid: user.uid,
+    });
+    
+    console.log('✅ Profile saved successfully!'); // Debug log
+    setSuccess(true);
+    console.log('🔄 Attempting redirect to dashboard...'); // Debug log
+    
+    // Try immediate redirect instead of setTimeout
+    router.push("/dashboard");
+    console.log('✅ Router.push called'); // Debug log
+    
+  } catch (error) {
+    console.error('❌ Error saving profile:', error); // Debug log
+    setError("Failed to save profile. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <form

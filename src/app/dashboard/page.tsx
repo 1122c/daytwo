@@ -1,10 +1,11 @@
 "use client";
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { auth, db } from '@/services/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth, db, storage } from '@/services/firebase';
+import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function DashboardPage() {
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
@@ -31,10 +32,13 @@ export default function DashboardPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
   const [authChecked, setAuthChecked] = useState(false);
   const router = useRouter();
+  const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
+  const [picUploading, setPicUploading] = useState(false);
+  const [promptLoading, setPromptLoading] = useState(false);
+  const [prompts, setPrompts] = useState<string[]>([]);
+  const [promptError, setPromptError] = useState('');
 
   // Auth check with improved logic
   useEffect(() => {
@@ -56,8 +60,6 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchProfile(uid: string) {
       setLoading(true);
-      setError('');
-      setSuccess(false);
       try {
         const docRef = doc(db, 'profiles', uid);
         const docSnap = await getDoc(docRef);
@@ -89,7 +91,6 @@ export default function DashboardPage() {
         }
       } catch (err) {
         console.error('Error fetching profile:', err);
-        setError('Failed to load profile.');
       } finally {
         setLoading(false);
       }
@@ -102,6 +103,21 @@ export default function DashboardPage() {
       setLoading(false);
     }
   }, [authUser, authChecked]);
+
+  // Fetch profile picture if exists
+  useEffect(() => {
+    async function fetchProfilePic() {
+      if (authUser?.uid) {
+        try {
+          const url = await getDownloadURL(ref(storage, `profile-pictures/${authUser.uid}`));
+          setProfilePicUrl(url);
+        } catch {
+          setProfilePicUrl(null);
+        }
+      }
+    }
+    fetchProfilePic();
+  }, [authUser]);
 
   // Example chips for each field
   const EXAMPLES = {
@@ -130,13 +146,10 @@ export default function DashboardPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!authUser) {
-      setError('You must be logged in to save your profile.');
       return;
     }
     
     setSaving(true);
-    setError('');
-    setSuccess(false);
     
     try {
       console.log('Saving profile for user:', authUser.uid);
@@ -158,13 +171,68 @@ export default function DashboardPage() {
         updatedAt: new Date(),
       }, { merge: true });
       
-      setSuccess(true);
       console.log('Profile saved successfully');
     } catch (err) {
       console.error('Error saving profile:', err);
-      setError('Failed to update profile.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handlePicUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!authUser || !e.target.files?.[0]) return;
+    setPicUploading(true);
+    try {
+      const file = e.target.files[0];
+      const storageRef = ref(storage, `profile-pictures/${authUser.uid}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setProfilePicUrl(url);
+    } catch {
+      // Handle upload error
+    } finally {
+      setPicUploading(false);
+    }
+  }
+
+  async function handlePrompt() {
+    setPromptLoading(true);
+    setPromptError('');
+    setPrompts([]);
+    try {
+      // Create a sample "match" profile for testing
+      const sampleMatch = {
+        name: 'Sample Match',
+        values: ['integrity', 'creativity', 'curiosity'],
+        goals: ['collaborate on projects', 'expand network']
+      };
+
+      const currentUser = {
+        name: profile.name || authUser?.email || 'User',
+        values: profile.values ? profile.values.split(',').map(v => v.trim()) : [],
+        goals: profile.goals ? profile.goals.split(',').map(g => g.trim()) : []
+      };
+
+      const res = await fetch('/api/conversation-starters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userProfile: currentUser, 
+          matchProfile: sampleMatch 
+        }),
+      });
+      
+      const data = await res.json();
+      if (data.starters) {
+        setPrompts(data.starters);
+      } else {
+        setPromptError('No prompts found.');
+      }
+    } catch (err) {
+      console.error('Error generating prompts:', err);
+      setPromptError('Failed to generate prompts.');
+    } finally {
+      setPromptLoading(false);
     }
   }
 
@@ -188,19 +256,51 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-10">
-      <nav className="w-full max-w-xl mx-auto mb-8 flex justify-between">
-        <Link href="/">
-          <span className="text-blue-600 hover:underline font-medium">Onboarding</span>
-        </Link>
-        <Link href="/discover">
-          <span className="text-blue-600 hover:underline font-medium">Discover Profiles</span>
-        </Link>
+      <nav className="w-full max-w-xl mx-auto mb-8 flex justify-between items-center">
+        <div className="flex gap-4">
+          <Link href="/">
+            <span className="text-blue-600 hover:underline font-medium">Onboarding</span>
+          </Link>
+          <Link href="/discover">
+            <span className="text-blue-600 hover:underline font-medium">Discover Profiles</span>
+          </Link>
+        </div>
+        <button
+          className="text-red-600 hover:underline text-sm"
+          onClick={async () => {
+            await signOut(auth);
+            router.push('/');
+          }}
+        >
+          Logout
+        </button>
       </nav>
       <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-8 flex flex-col items-center">
-        <h1 className="text-2xl font-bold mb-4">Your Profile</h1>
-        {error && <div className="mb-2 text-red-600">{error}</div>}
-        {success && <div className="mb-2 text-green-600">Profile updated!</div>}
+        {/* Profile Picture and Name */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="relative w-24 h-24 mb-2">
+            {profilePicUrl ? (
+              <img src={profilePicUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover border" />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-3xl font-bold text-gray-600 border">
+                {profile.name ? profile.name[0].toUpperCase() : (authUser?.email?.[0]?.toUpperCase() || '?')}
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="absolute bottom-0 left-0 w-full opacity-0 cursor-pointer h-full"
+              title="Upload profile picture"
+              onChange={handlePicUpload}
+              disabled={picUploading}
+            />
+            {picUploading && <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 text-xs">Uploading...</div>}
+          </div>
+          <div className="text-xl font-semibold mt-2">{profile.name || authUser?.email || 'User'}</div>
+        </div>
+        {/* About You Section */}
         <form className="w-full" onSubmit={handleSubmit}>
+          <h2 className="text-lg font-bold mb-2 mt-2">About You</h2>
           <label className="block mb-2 font-semibold">Name</label>
           <input
             className="w-full border rounded p-2 mb-4"
@@ -344,7 +444,8 @@ export default function DashboardPage() {
             placeholder="e.g. LGBTQ+, Women in Tech, BIPOC"
             spellCheck={true}
           />
-          <label className="block mb-2 font-semibold">Public Profiles</label>
+          <h2 className="text-lg font-bold mb-2 mt-6">Social Profiles</h2>
+          <label className="block mb-2 font-semibold">LinkedIn URL</label>
           <input
             className="w-full border rounded p-2 mb-2"
             type="url"
@@ -352,6 +453,7 @@ export default function DashboardPage() {
             value={profile.publicProfiles.linkedin}
             onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, linkedin: e.target.value } })}
           />
+          <label className="block mb-2 font-semibold">Twitter URL</label>
           <input
             className="w-full border rounded p-2 mb-2"
             type="url"
@@ -359,6 +461,7 @@ export default function DashboardPage() {
             value={profile.publicProfiles.twitter}
             onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, twitter: e.target.value } })}
           />
+          <label className="block mb-2 font-semibold">Instagram URL</label>
           <input
             className="w-full border rounded p-2 mb-2"
             type="url"
@@ -366,6 +469,7 @@ export default function DashboardPage() {
             value={profile.publicProfiles.instagram}
             onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, instagram: e.target.value } })}
           />
+          <label className="block mb-2 font-semibold">TikTok URL</label>
           <input
             className="w-full border rounded p-2 mb-2"
             type="url"
@@ -373,6 +477,7 @@ export default function DashboardPage() {
             value={profile.publicProfiles.tiktok}
             onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, tiktok: e.target.value } })}
           />
+          <label className="block mb-2 font-semibold">OnlyFans URL</label>
           <input
             className="w-full border rounded p-2 mb-4"
             type="url"
@@ -382,12 +487,30 @@ export default function DashboardPage() {
           />
           <button
             type="submit"
-            className="w-full bg-green-500 text-white py-2 rounded"
+            className="w-full bg-green-500 text-white py-2 rounded mt-4"
             disabled={saving}
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </form>
+        {/* Conversation Prompts Section */}
+        <div className="w-full mt-8">
+          <h2 className="text-lg font-bold mb-2">Test Conversation Prompts</h2>
+          <div className="text-xs text-gray-500 mb-2">This generates sample conversation starters between you and a test profile.</div>
+          <button
+            className="bg-blue-500 text-white px-4 py-2 rounded mb-2"
+            onClick={handlePrompt}
+            disabled={promptLoading}
+          >
+            {promptLoading ? 'Generating...' : 'Generate Test Prompts'}
+          </button>
+          {promptError && <div className="text-red-600 text-sm mt-2">{promptError}</div>}
+          {prompts.length > 0 && (
+            <ul className="mt-2 text-sm bg-blue-50 rounded p-2">
+              {prompts.map((p, idx) => <li key={idx}>💬 {p}</li>)}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

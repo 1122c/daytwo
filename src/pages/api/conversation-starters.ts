@@ -1,4 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { OpenAI } from 'openai';
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -31,16 +37,29 @@ Generate 3 conversation starters that:
 Format each starter on a new line.`;
 
   try {
-    const openaiRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/openai`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
+    console.log('Calling OpenAI API for conversation starters'); // Debug log
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: 'You are an expert at creating meaningful conversation starters.' },
+        { role: 'user', content: prompt },
+      ],
+      max_tokens: 200,
+      temperature: 0.7,
     });
-    const data = await openaiRes.json();
-    if (!data.result) throw new Error('No result from OpenAI');
-    const starters = data.result.split('\n').filter(Boolean);
+
+    const result = response.choices[0]?.message?.content?.trim();
+    if (!result) {
+      throw new Error('No result from OpenAI');
+    }
+
+    const starters = result.split('\n').filter(Boolean);
+    console.log('Generated conversation starters:', starters); // Debug log
+    
     res.status(200).json({ starters });
   } catch (error) {
+    console.error('Error generating conversation starters:', error);
     res.status(500).json({ error: 'Failed to generate conversation starters' });
   }
-} 
+}

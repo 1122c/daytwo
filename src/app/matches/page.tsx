@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import { auth } from '@/services/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 interface Profile {
   id: string;
@@ -47,6 +50,7 @@ export default function MatchesPage() {
   const [growthSuggestions, setGrowthSuggestions] = useState<Record<number, string[]>>({});
   const [growthLoading, setGrowthLoading] = useState<Record<number, boolean>>({});
   const [growthError, setGrowthError] = useState<Record<number, string>>({});
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchMatches() {
@@ -142,7 +146,18 @@ export default function MatchesPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8">Your Matches</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-center">Your Matches</h1>
+          <button
+            className="text-red-600 hover:underline text-sm"
+            onClick={async () => {
+              await signOut(auth);
+              router.push('/');
+            }}
+          >
+            Logout
+          </button>
+        </div>
         {loading ? (
           <div className="text-center text-gray-500">Loading matches...</div>
         ) : error ? (
