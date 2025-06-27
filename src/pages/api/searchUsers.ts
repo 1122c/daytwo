@@ -33,15 +33,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           values: Array.isArray(data.values) ? data.values : [],
           goals: Array.isArray(data.goals) ? data.goals : [],
           preferences: Array.isArray(data.preferences) ? data.preferences : [],
+          communicationStyle: Array.isArray(data.communicationStyle) ? data.communicationStyle : [],
+          interests: Array.isArray(data.interests) ? data.interests : [],
+          connectionType: Array.isArray(data.connectionType) ? data.connectionType : [],
+          growthAreas: Array.isArray(data.growthAreas) ? data.growthAreas : [],
+          availability: Array.isArray(data.availability) ? data.availability : [],
+          location: data.location || '',
+          timezone: data.timezone || '',
+          identityTags: Array.isArray(data.identityTags) ? data.identityTags : [],
           publicProfiles: typeof data.publicProfiles === 'object' && data.publicProfiles !== null ? data.publicProfiles : {},
-        } as UserProfile;
+        } as UserProfile & {
+          communicationStyle?: string[];
+          interests?: string[];
+          connectionType?: string[];
+          growthAreas?: string[];
+          availability?: string[];
+          location?: string;
+          timezone?: string;
+          identityTags?: string[];
+        };
       })
       .filter(profile => {
         return (
           profile.name.toLowerCase().includes(q) ||
           profile.values.some(v => v.toLowerCase().includes(q)) ||
           profile.goals.some(g => g.toLowerCase().includes(q)) ||
-          profile.preferences.some(p => p.toLowerCase().includes(q))
+          profile.preferences.some(p => p.toLowerCase().includes(q)) ||
+          (profile.communicationStyle && profile.communicationStyle.some(cs => cs.toLowerCase().includes(q))) ||
+          (profile.interests && profile.interests.some(i => i.toLowerCase().includes(q))) ||
+          (profile.connectionType && profile.connectionType.some(ct => ct.toLowerCase().includes(q))) ||
+          (profile.growthAreas && profile.growthAreas.some(ga => ga.toLowerCase().includes(q))) ||
+          (profile.availability && profile.availability.some(a => a.toLowerCase().includes(q))) ||
+          (profile.location && profile.location.toLowerCase().includes(q)) ||
+          (profile.timezone && profile.timezone.toLowerCase().includes(q)) ||
+          (profile.identityTags && profile.identityTags.some(tag => tag.toLowerCase().includes(q))) ||
+          (profile.publicProfiles && Object.values(profile.publicProfiles).some(url => typeof url === 'string' && url.toLowerCase().includes(q)))
         );
       });
     res.status(200).json({ users: matches });
