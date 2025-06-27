@@ -18,6 +18,19 @@ const steps = [
   "Public Profiles"
 ];
 
+// Example chips for each field
+const EXAMPLES = {
+  values: ["empathy", "growth", "curiosity", "integrity", "creativity", "community"],
+  goals: ["find a mentor", "make friends", "collaborate on projects", "expand network"],
+  preferences: ["small group", "remote", "in-person", "one-on-one"],
+  communicationStyle: ["direct", "reflective", "supportive", "analytical"],
+  interests: ["art", "tech", "outdoors", "music", "volunteering"],
+  connectionType: ["mentorship", "collaboration", "friendship", "accountability partner"],
+  growthAreas: ["leadership", "emotional intelligence", "public speaking"],
+  availability: ["weekdays", "evenings", "weekends", "flexible"],
+  identityTags: ["lgbtq+", "women in tech", "bipoc"],
+};
+
 export default function OnboardingForm() {
   const [step, setStep] = useState(0);
   const [values, setValues] = useState("");
@@ -54,6 +67,18 @@ export default function OnboardingForm() {
   function handleBack() {
     setStep((s) => Math.max(s - 1, 0));
   }
+
+  function addChip(
+    setter: React.Dispatch<React.SetStateAction<string>>,
+    value: string,
+    current: string
+  ) {
+    const arr = current.split(",").map((v: string) => v.trim().toLowerCase()).filter(Boolean);
+    if (!arr.includes(value)) {
+      setter((prev: string) => (prev ? prev + ", " + value : value));
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -66,17 +91,17 @@ export default function OnboardingForm() {
     }
     try {
       await setDoc(doc(db, "profiles", user.uid), {
-        values: values ? values.split(",").map((v) => v.trim()).filter(Boolean) : [],
-        goals: goals ? goals.split(",").map((g) => g.trim()).filter(Boolean) : [],
-        preferences: preferences ? preferences.split(",").map((p) => p.trim()).filter(Boolean) : [],
-        communicationStyle: communicationStyle ? communicationStyle.split(",").map((c) => c.trim()).filter(Boolean) : [],
-        interests: interests ? interests.split(",").map((i) => i.trim()).filter(Boolean) : [],
-        connectionType: connectionType ? connectionType.split(",").map((c) => c.trim()).filter(Boolean) : [],
-        growthAreas: growthAreas ? growthAreas.split(",").map((g) => g.trim()).filter(Boolean) : [],
-        availability: availability ? availability.split(",").map((a) => a.trim()).filter(Boolean) : [],
-        location: location || "",
-        timezone: timezone || "",
-        identityTags: identityTags ? identityTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+        values: values ? values.split(",").map((v) => v.trim().toLowerCase()).filter(Boolean) : [],
+        goals: goals ? goals.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
+        preferences: preferences ? preferences.split(",").map((p) => p.trim().toLowerCase()).filter(Boolean) : [],
+        communicationStyle: communicationStyle ? communicationStyle.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [],
+        interests: interests ? interests.split(",").map((i) => i.trim().toLowerCase()).filter(Boolean) : [],
+        connectionType: connectionType ? connectionType.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [],
+        growthAreas: growthAreas ? growthAreas.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
+        availability: availability ? availability.split(",").map((a) => a.trim().toLowerCase()).filter(Boolean) : [],
+        location: location ? location.trim() : "",
+        timezone: timezone ? timezone.trim() : "",
+        identityTags: identityTags ? identityTags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean) : [],
         publicProfiles: profiles,
         createdAt: new Date(),
         name: user.displayName || user.email || "",
@@ -130,6 +155,12 @@ export default function OnboardingForm() {
         {step === 0 && (
           <div>
             <label className="block mb-2 font-semibold">What are your core values?</label>
+            <div className="text-xs text-gray-500 mb-1">e.g. what matters most to you in relationships and life?</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {EXAMPLES.values.map((ex) => (
+                <button type="button" key={ex} className="px-2 py-1 bg-gray-200 rounded text-xs" onClick={() => addChip(setValues, ex, values)}>{ex}</button>
+              ))}
+            </div>
             <input
               className="w-full border rounded p-2"
               type="text"
@@ -138,12 +169,19 @@ export default function OnboardingForm() {
               onChange={(e) => setValues(e.target.value)}
               required
               disabled={!user}
+              spellCheck={true}
             />
           </div>
         )}
         {step === 1 && (
           <div>
             <label className="block mb-2 font-semibold">What are your relational goals?</label>
+            <div className="text-xs text-gray-500 mb-1">e.g. what do you hope to get out of this platform?</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {EXAMPLES.goals.map((ex) => (
+                <button type="button" key={ex} className="px-2 py-1 bg-gray-200 rounded text-xs" onClick={() => addChip(setGoals, ex, goals)}>{ex}</button>
+              ))}
+            </div>
             <input
               className="w-full border rounded p-2"
               type="text"
@@ -152,84 +190,127 @@ export default function OnboardingForm() {
               onChange={(e) => setGoals(e.target.value)}
               required
               disabled={!user}
+              spellCheck={true}
             />
           </div>
         )}
         {step === 2 && (
           <div>
             <label className="block mb-2 font-semibold">Preferences (comma separated, optional)</label>
+            <div className="text-xs text-gray-500 mb-1">e.g. how do you prefer to connect?</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {EXAMPLES.preferences.map((ex) => (
+                <button type="button" key={ex} className="px-2 py-1 bg-gray-200 rounded text-xs" onClick={() => addChip(setPreferences, ex, preferences)}>{ex}</button>
+              ))}
+            </div>
             <input
               className="w-full border rounded p-2"
               type="text"
-              placeholder="e.g. small group, remote"
+              placeholder="e.g. small group, remote, in-person"
               value={preferences}
               onChange={(e) => setPreferences(e.target.value)}
               disabled={!user}
+              spellCheck={true}
             />
           </div>
         )}
         {step === 3 && (
           <div>
             <label className="block mb-2 font-semibold">Communication Style (comma separated, optional)</label>
+            <div className="text-xs text-gray-500 mb-1">e.g. how do you like to communicate?</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {EXAMPLES.communicationStyle.map((ex) => (
+                <button type="button" key={ex} className="px-2 py-1 bg-gray-200 rounded text-xs" onClick={() => addChip(setCommunicationStyle, ex, communicationStyle)}>{ex}</button>
+              ))}
+            </div>
             <input
               className="w-full border rounded p-2"
               type="text"
-              placeholder="e.g. direct, reflective, supportive"
+              placeholder="e.g. direct, reflective, supportive, analytical"
               value={communicationStyle}
               onChange={(e) => setCommunicationStyle(e.target.value)}
               disabled={!user}
+              spellCheck={true}
             />
           </div>
         )}
         {step === 4 && (
           <div>
             <label className="block mb-2 font-semibold">Interests (comma separated, optional)</label>
+            <div className="text-xs text-gray-500 mb-1">e.g. what are you passionate about?</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {EXAMPLES.interests.map((ex) => (
+                <button type="button" key={ex} className="px-2 py-1 bg-gray-200 rounded text-xs" onClick={() => addChip(setInterests, ex, interests)}>{ex}</button>
+              ))}
+            </div>
             <input
               className="w-full border rounded p-2"
               type="text"
-              placeholder="e.g. art, tech, outdoors"
+              placeholder="e.g. art, tech, outdoors, music, volunteering"
               value={interests}
               onChange={(e) => setInterests(e.target.value)}
               disabled={!user}
+              spellCheck={true}
             />
           </div>
         )}
         {step === 5 && (
           <div>
             <label className="block mb-2 font-semibold">Connection Type (comma separated, optional)</label>
+            <div className="text-xs text-gray-500 mb-1">e.g. what kind of connection are you seeking?</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {EXAMPLES.connectionType.map((ex) => (
+                <button type="button" key={ex} className="px-2 py-1 bg-gray-200 rounded text-xs" onClick={() => addChip(setConnectionType, ex, connectionType)}>{ex}</button>
+              ))}
+            </div>
             <input
               className="w-full border rounded p-2"
               type="text"
-              placeholder="e.g. mentorship, collaboration, friendship"
+              placeholder="e.g. mentorship, collaboration, friendship, accountability partner"
               value={connectionType}
               onChange={(e) => setConnectionType(e.target.value)}
               disabled={!user}
+              spellCheck={true}
             />
           </div>
         )}
         {step === 6 && (
           <div>
             <label className="block mb-2 font-semibold">Growth Areas (comma separated, optional)</label>
+            <div className="text-xs text-gray-500 mb-1">e.g. what do you want to work on or improve?</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {EXAMPLES.growthAreas.map((ex) => (
+                <button type="button" key={ex} className="px-2 py-1 bg-gray-200 rounded text-xs" onClick={() => addChip(setGrowthAreas, ex, growthAreas)}>{ex}</button>
+              ))}
+            </div>
             <input
               className="w-full border rounded p-2"
               type="text"
-              placeholder="e.g. leadership, public speaking"
+              placeholder="e.g. leadership, emotional intelligence, public speaking"
               value={growthAreas}
               onChange={(e) => setGrowthAreas(e.target.value)}
               disabled={!user}
+              spellCheck={true}
             />
           </div>
         )}
         {step === 7 && (
           <div>
             <label className="block mb-2 font-semibold">Availability (comma separated, optional)</label>
+            <div className="text-xs text-gray-500 mb-1">e.g. when are you usually available to connect?</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {EXAMPLES.availability.map((ex) => (
+                <button type="button" key={ex} className="px-2 py-1 bg-gray-200 rounded text-xs" onClick={() => addChip(setAvailability, ex, availability)}>{ex}</button>
+              ))}
+            </div>
             <input
               className="w-full border rounded p-2"
               type="text"
-              placeholder="e.g. weekdays, evenings, weekends"
+              placeholder="e.g. weekdays, evenings, weekends, flexible"
               value={availability}
               onChange={(e) => setAvailability(e.target.value)}
               disabled={!user}
+              spellCheck={true}
             />
           </div>
         )}
@@ -258,6 +339,12 @@ export default function OnboardingForm() {
         {step === 9 && (
           <div>
             <label className="block mb-2 font-semibold">Identity Tags (comma separated, optional)</label>
+            <div className="text-xs text-gray-500 mb-1">e.g. communities or identities you want to connect around</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {EXAMPLES.identityTags.map((ex) => (
+                <button type="button" key={ex} className="px-2 py-1 bg-gray-200 rounded text-xs" onClick={() => addChip(setIdentityTags, ex, identityTags)}>{ex}</button>
+              ))}
+            </div>
             <input
               className="w-full border rounded p-2"
               type="text"
@@ -265,6 +352,7 @@ export default function OnboardingForm() {
               value={identityTags}
               onChange={(e) => setIdentityTags(e.target.value)}
               disabled={!user}
+              spellCheck={true}
             />
           </div>
         )}
