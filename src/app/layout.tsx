@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import './globals.css'       // <— import Tailwind here (server component!)
-import Layout from '../components/Layout'  // this is a client component
+import NavWrapper from '../components/NavWrapper'
 
 export const metadata = {
   title: 'ConnectMind',
@@ -8,10 +8,13 @@ export const metadata = {
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  // Render nav on all pages except home
   return (
     <html lang="en">
       <body>
-        <div className="bg-green-200 min-h-screen">{ children }</div>
+        <NavWrapper>
+          <div className="bg-green-200 min-h-screen">{ children }</div>
+        </NavWrapper>
       </body>
     </html>
   )

@@ -1,8 +1,7 @@
 "use client";
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { auth, db, storage } from '@/services/firebase';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -285,25 +284,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-10">
-      <nav className="w-full max-w-xl mx-auto mb-8 flex justify-between items-center">
-        <div className="flex gap-4">
-          <Link href="/">
-            <span className="text-blue-600 hover:underline font-medium">Onboarding</span>
-          </Link>
-          <Link href="/discover">
-            <span className="text-blue-600 hover:underline font-medium">Discover Profiles</span>
-          </Link>
-        </div>
-        <button
-          className="text-red-600 hover:underline text-sm"
-          onClick={async () => {
-            await signOut(auth);
-            router.push('/');
-          }}
-        >
-          Logout
-        </button>
-      </nav>
       <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-8 flex flex-col items-center">
         {/* User Search Bar */}
         <div className="mb-8 p-4 bg-white rounded shadow">

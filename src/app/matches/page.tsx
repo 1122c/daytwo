@@ -79,9 +79,13 @@ export default function MatchesPage() {
     setStartersError((prev) => ({ ...prev, [i]: "" }));
     const [userProfile, matchProfile] = getPair(match);
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch("/api/conversation-starters", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({ userProfile, matchProfile }),
       });
       const data = await res.json();
@@ -102,9 +106,13 @@ export default function MatchesPage() {
     setIceBreakersError((prev) => ({ ...prev, [i]: "" }));
     const [userProfile, matchProfile] = getPair(match);
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch("/api/ice-breakers", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({ userProfile, matchProfile }),
       });
       const data = await res.json();
@@ -125,9 +133,13 @@ export default function MatchesPage() {
     setGrowthError((prev) => ({ ...prev, [i]: "" }));
     const [userProfile, matchProfile] = getPair(match);
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch("/api/growth-suggestions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({ userProfile, matchProfile }),
       });
       const data = await res.json();
