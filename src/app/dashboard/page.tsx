@@ -40,10 +40,6 @@ export default function DashboardPage() {
   const [promptLoading, setPromptLoading] = useState(false);
   const [prompts, setPrompts] = useState<string[]>([]);
   const [promptError, setPromptError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState('');
 
   // Auth check with improved logic
   useEffect(() => {
@@ -241,29 +237,6 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleUserSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setSearchLoading(true);
-    setSearchError('');
-    setSearchResults([]);
-    try {
-      if (!authUser) throw new Error('Not authenticated');
-      const idToken = await authUser.getIdToken();
-      const res = await fetch(`/api/searchUsers?query=${encodeURIComponent(searchQuery)}`, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-      if (!res.ok) throw new Error('Failed to search users');
-      const data = await res.json();
-      setSearchResults(data.users || []);
-    } catch {
-      setSearchError('Error searching users.');
-    } finally {
-      setSearchLoading(false);
-    }
-  }
-
   // Show loading while checking auth or loading profile
   if (!authChecked || (authUser && loading)) {
     return (
@@ -285,61 +258,6 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-8 flex flex-col items-center">
-        {/* User Search Bar */}
-        <div className="mb-8 p-4 bg-white rounded shadow">
-          <form onSubmit={handleUserSearch} className="flex flex-col sm:flex-row gap-2 items-center">
-            <input
-              type="text"
-              className="border rounded px-3 py-2 w-full sm:w-64"
-              placeholder="Search users by name, value, goal, or preference..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-              disabled={searchLoading || !searchQuery.trim()}
-            >
-              {searchLoading ? 'Searching...' : 'Search'}
-            </button>
-          </form>
-          {searchError && <div className="text-red-600 mt-2">{searchError}</div>}
-          {searchResults.length > 0 && (
-            <div className="mt-4">
-              <h3 className="font-semibold mb-2">Results:</h3>
-              <ul className="space-y-4">
-                {searchResults.map((user) => (
-                  <li key={user.id} className="border rounded p-3 bg-gray-50">
-                    <div className="font-bold text-lg">{user.name}</div>
-                    <div><span className="font-semibold">Values:</span> {user.values?.join(', ')}</div>
-                    <div><span className="font-semibold">Goals:</span> {user.goals?.join(', ')}</div>
-                    <div><span className="font-semibold">Preferences:</span> {user.preferences?.join(', ')}</div>
-                    {user.publicProfiles?.linkedin && (
-                      <div className="text-sm text-gray-600 mt-1">
-                        <a href={user.publicProfiles?.linkedin} target="_blank" rel="noopener noreferrer" className="mr-2 underline">LinkedIn</a>
-                      </div>
-                    )}
-                    {user.publicProfiles?.twitter && (
-                      <div className="text-sm text-gray-600 mt-1">
-                        <a href={user.publicProfiles?.twitter} target="_blank" rel="noopener noreferrer" className="mr-2 underline">Twitter</a>
-                      </div>
-                    )}
-                    {user.publicProfiles?.instagram && (
-                      <div className="text-sm text-gray-600 mt-1">
-                        <a href={user.publicProfiles?.instagram} target="_blank" rel="noopener noreferrer" className="mr-2 underline">Instagram</a>
-                      </div>
-                    )}
-                    {user.publicProfiles?.tiktok && (
-                      <div className="text-sm text-gray-600 mt-1">
-                        <a href={user.publicProfiles?.tiktok} target="_blank" rel="noopener noreferrer" className="mr-2 underline">TikTok</a>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
         {/* Profile Picture and Name */}
         <div className="flex flex-col items-center mb-6">
           <div className="relative w-24 h-24 mb-2">
@@ -557,24 +475,6 @@ export default function DashboardPage() {
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </form>
-        {/* Conversation Prompts Section */}
-        <div className="w-full mt-8">
-          <h2 className="text-lg font-bold mb-2">Test Conversation Prompts</h2>
-          <div className="text-xs text-gray-500 mb-2">This generates sample conversation starters between you and a test profile.</div>
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded mb-2"
-            onClick={handlePrompt}
-            disabled={promptLoading}
-          >
-            {promptLoading ? 'Generating...' : 'Generate Test Prompts'}
-          </button>
-          {promptError && <div className="text-red-600 text-sm mt-2">{promptError}</div>}
-          {prompts.length > 0 && (
-            <ul className="mt-2 text-sm bg-blue-50 rounded p-2">
-              {prompts.map((p, idx) => <li key={idx}>💬 {p}</li>)}
-            </ul>
-          )}
-        </div>
       </div>
     </div>
   );

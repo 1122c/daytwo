@@ -177,15 +177,6 @@ export default function MatchesPage() {
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-center">Your Matches</h1>
-          <button
-            className="text-red-600 hover:underline text-sm"
-            onClick={async () => {
-              await signOut(auth);
-              router.push('/');
-            }}
-          >
-            Logout
-          </button>
         </div>
         {loading ? (
           <div className="text-center text-gray-500">Loading matches...</div>
