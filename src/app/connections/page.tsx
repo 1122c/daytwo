@@ -52,6 +52,9 @@ export default function ConnectionsPage() {
   const [iceBreakersLoading, setIceBreakersLoading] = useState<Record<number, boolean>>({});
   const [iceBreakersError, setIceBreakersError] = useState<Record<number, string>>({});
   const [promptType, setPromptType] = useState<Record<number, 'icebreaker' | 'starter'>>({});
+  const [growthOpportunities, setGrowthOpportunities] = useState<Record<number, string[]>>({});
+  const [growthLoading, setGrowthLoading] = useState<Record<number, boolean>>({});
+  const [growthError, setGrowthError] = useState<Record<number, string>>({});
 
   const router = useRouter();
 
@@ -170,6 +173,33 @@ export default function ConnectionsPage() {
       setIceBreakersError((prev) => ({ ...prev, [i]: "Failed to fetch ice breakers." }));
     } finally {
       setIceBreakersLoading((prev) => ({ ...prev, [i]: false }));
+    }
+  }
+
+  async function handleFetchGrowthOpportunities(i: number, match: Match) {
+    setGrowthLoading((prev) => ({ ...prev, [i]: true }));
+    setGrowthError((prev) => ({ ...prev, [i]: "" }));
+    const [userProfile, matchProfile] = getPair(match);
+    try {
+      const idToken = await authUser?.getIdToken();
+      const res = await fetch("/api/growth-opportunities", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify({ userProfile, matchProfile }),
+      });
+      const data = await res.json();
+      if (data.opportunities) {
+        setGrowthOpportunities((prev) => ({ ...prev, [i]: data.opportunities }));
+      } else {
+        setGrowthError((prev) => ({ ...prev, [i]: "No growth opportunities found." }));
+      }
+    } catch {
+      setGrowthError((prev) => ({ ...prev, [i]: "Failed to fetch growth opportunities." }));
+    } finally {
+      setGrowthLoading((prev) => ({ ...prev, [i]: false }));
     }
   }
 
@@ -297,6 +327,20 @@ export default function ConnectionsPage() {
                     )}
                   </>
                 )}
+                {/* Growth Opportunities Results */}
+                {growthError[i] && <div className="text-red-600 text-sm mt-2">{growthError[i]}</div>}
+                {growthOpportunities[i] && (
+                  <ul className="mt-2 text-sm bg-purple-50 rounded p-2">
+                    {growthOpportunities[i].map((s, idx) => <li key={idx}>🌱 {s}</li>)}
+                  </ul>
+                )}
+                <button
+                  className="px-3 py-1 bg-purple-500 text-white rounded text-sm disabled:opacity-50"
+                  onClick={() => handleFetchGrowthOpportunities(i, match)}
+                  disabled={growthLoading[i]}
+                >
+                  {growthLoading[i] ? "Loading..." : "Show Growth Opportunities"}
+                </button>
               </div>
             ))}
           </div>

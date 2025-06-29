@@ -17,7 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const idToken = authHeader.split('Bearer ')[1];
   try {
     await adminAuth.verifyIdToken(idToken);
-  } catch {
+  } catch (error) {
+    console.error('Token verification failed:', error);
     return res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
 
@@ -41,27 +42,40 @@ User 2:
 - Values: ${matchProfile.values?.join(', ') || 'N/A'}
 - Goals: ${matchProfile.goals?.join(', ') || 'N/A'}
 
-Output as a JSON array of 3 strings.
+Generate exactly 3 growth opportunities. Return ONLY a JSON array of strings, no other text.
 `;
 
   try {
+    console.log('Calling OpenAI API for growth opportunities');
+    
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 300,
+      max_tokens: 400,
     });
 
     let opportunities: string[] = [];
     try {
       const text = completion.choices[0].message.content?.trim() || '';
+      console.log('Raw OpenAI response:', text);
       opportunities = JSON.parse(text);
-    } catch {
-      opportunities = [completion.choices[0].message.content || ''];
+    } catch (parseError) {
+      console.error('Failed to parse JSON, using fallback:', parseError);
+      // Fallback: split by lines and clean up
+      const text = completion.choices[0].message.content?.trim() || '';
+      opportunities = text.split('\n')
+        .filter(line => line.trim().length > 0)
+        .map(line => line.replace(/^[-*"'\d\.]\s*/, '').replace(/["']$/, '').trim())
+        .filter(line => line.length > 20)
+        .slice(0, 3);
     }
 
+    console.log('Generated growth opportunities:', opportunities);
     res.status(200).json({ opportunities });
-  } catch {
+
+  } catch (error) {
+    console.error('Error generating growth opportunities:', error);
     res.status(500).json({ error: 'Failed to generate growth opportunities' });
   }
-} 
+}
