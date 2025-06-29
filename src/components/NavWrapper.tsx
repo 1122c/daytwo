@@ -89,9 +89,9 @@ export default function NavWrapper({ children }: { children: ReactNode }) {
                 </div>
               )}
             </form>
-            <a href="/onboarding" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors">Onboarding</a>
+            {/* <a href="/onboarding" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors">Onboarding</a> */}
             <a href="/discover" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors">Discover Profiles</a>
-            <a href="/matches" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors">Matches</a>
+            <a href="/connections" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors">Connections</a>
             <a href="/chat" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors">Chat</a>
             <a href="/conversation-starters" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors">Conversation Starters</a>
             <button onClick={handleLogout} className="px-3 py-1 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors ml-2">Logout</button>

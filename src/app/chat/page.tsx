@@ -66,7 +66,7 @@ export default function ChatPage() {
         setSelectedConversation(conversationId);
       });
     }
-  }, [authUser, users, searchParams]);
+  }, [authUser, users, conversations, searchParams]);
 
   useEffect(() => {
     if (!selectedConversation) {

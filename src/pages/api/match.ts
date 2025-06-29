@@ -54,36 +54,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const minSharedInterests = req.query.minSharedInterests ? parseInt(req.query.minSharedInterests as string, 10) : 0;
     
     console.log('⚙️ Calling flexibleMatch...');
-    const matches = flexibleMatch(profiles, {
+    const connections = flexibleMatch(profiles, {
       minSharedValues,
       minSharedGoals,
       minSharedPreferences,
       groupSize,
       minSharedInterests,
     });
-    console.log('🎯 Found', matches.length, 'matches');
+    console.log('🎯 Found', connections.length, 'connections');
     
-    // Add GPT explanations for the top 10 matches
+    // Add GPT explanations for the top 10 connections
     console.log('🤖 Adding AI explanations...');
-    const matchesWithExplanations = await Promise.all(
-      matches.slice(0, 10).map(async (match, index) => {
-        console.log(`🤖 Processing match ${index + 1}...`);
+    const connectionsWithExplanations = await Promise.all(
+      connections.slice(0, 10).map(async (connection, index) => {
+        console.log(`🤖 Processing connection ${index + 1}...`);
         // Ensure name is always a string for GPT
-        const groupWithNames = match.group.map((p) => ({ ...p, name: p.name || 'Anonymous' }));
+        const groupWithNames = connection.group.map((p) => ({ ...p, name: p.name || 'Anonymous' }));
         const explanation = await generateMatchExplanation(groupWithNames);
-        console.log(`✅ Generated explanation for match ${index + 1}`);
-        return { ...match, explanation };
+        console.log(`✅ Generated explanation for connection ${index + 1}`);
+        return { ...connection, explanation };
       })
     );
     
     // For the rest, just return without explanation
-    const rest = matches.slice(10).map((match) => ({ ...match, explanation: null }));
+    const rest = connections.slice(10).map((connection) => ({ ...connection, explanation: null }));
     
-    console.log('🎉 Sending response with', matchesWithExplanations.length + rest.length, 'total matches');
-    res.status(200).json({ matches: [...matchesWithExplanations, ...rest] });
+    console.log('🎉 Sending response with', connectionsWithExplanations.length + rest.length, 'total connections');
+    res.status(200).json({ matches: [...connectionsWithExplanations, ...rest] });
     
   } catch (error) {
     console.error('💥 MATCH API ERROR:', error);
-    res.status(500).json({ error: 'Failed to generate matches' });
+    res.status(500).json({ error: 'Failed to generate connections' });
   }
 }

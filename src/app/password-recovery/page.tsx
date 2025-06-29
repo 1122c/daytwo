@@ -1,8 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { auth } from "@/services/firebase";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { useRouter } from "next/navigation";
+import { sendPasswordResetEmail, User } from "firebase/auth";
 import Link from "next/link";
 
 export default function PasswordRecoveryPage() {
@@ -10,7 +9,6 @@ export default function PasswordRecoveryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

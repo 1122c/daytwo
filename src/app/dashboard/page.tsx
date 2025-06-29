@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import React from 'react';
 import type { UserProfile } from '@/services/websocketService';
+import Image from 'next/image';
 
 export default function DashboardPage() {
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
@@ -37,9 +38,6 @@ export default function DashboardPage() {
   const router = useRouter();
   const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
   const [picUploading, setPicUploading] = useState(false);
-  const [promptLoading, setPromptLoading] = useState(false);
-  const [prompts, setPrompts] = useState<string[]>([]);
-  const [promptError, setPromptError] = useState('');
 
   // Auth check with improved logic
   useEffect(() => {
@@ -196,47 +194,6 @@ export default function DashboardPage() {
     }
   }
 
-  async function handlePrompt() {
-    setPromptLoading(true);
-    setPromptError('');
-    setPrompts([]);
-    try {
-      // Create a sample "match" profile for testing
-      const sampleMatch = {
-        name: 'Sample Match',
-        values: ['integrity', 'creativity', 'curiosity'],
-        goals: ['collaborate on projects', 'expand network']
-      };
-
-      const currentUser = {
-        name: profile.name || authUser?.email || 'User',
-        values: profile.values ? profile.values.split(',').map(v => v.trim()) : [],
-        goals: profile.goals ? profile.goals.split(',').map(g => g.trim()) : []
-      };
-
-      const res = await fetch('/api/conversation-starters', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userProfile: currentUser, 
-          matchProfile: sampleMatch 
-        }),
-      });
-      
-      const data = await res.json();
-      if (data.starters) {
-        setPrompts(data.starters);
-      } else {
-        setPromptError('No prompts found.');
-      }
-    } catch (err) {
-      console.error('Error generating prompts:', err);
-      setPromptError('Failed to generate prompts.');
-    } finally {
-      setPromptLoading(false);
-    }
-  }
-
   // Show loading while checking auth or loading profile
   if (!authChecked || (authUser && loading)) {
     return (
@@ -262,7 +219,7 @@ export default function DashboardPage() {
         <div className="flex flex-col items-center mb-6">
           <div className="relative w-24 h-24 mb-2">
             {profilePicUrl ? (
-              <img src={profilePicUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover border" />
+              <Image src={profilePicUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover border" width={96} height={96} />
             ) : (
               <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-3xl font-bold text-gray-600 border">
                 {profile.name ? profile.name[0].toUpperCase() : (authUser?.email?.[0]?.toUpperCase() || '?')}

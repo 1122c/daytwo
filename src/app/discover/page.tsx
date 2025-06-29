@@ -51,9 +51,7 @@ export default function ProfileDiscoveryPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <nav className="w-full max-w-2xl mx-auto mb-8 flex justify-end">
-        <Link href="/">
-          <span className="text-blue-600 hover:underline font-medium">Onboarding</span>
-        </Link>
+        {/* Onboarding link removed */}
       </nav>
       <h1 className="text-3xl font-bold text-center mb-8">Discover Profiles</h1>
       {loading ? (

@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { auth } from '@/services/firebase';
-import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { User } from 'firebase/auth';
 
 interface Profile {
   id: string;
@@ -36,11 +36,11 @@ interface Match {
   explanation?: string | null;
 }
 
-export default function MatchesPage() {
-  const [matches, setMatches] = useState<Match[]>([]);
+export default function ConnectionsPage() {
+  const [connections, setConnections] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [authUser, setAuthUser] = useState<any>(null);
+  const [authUser, setAuthUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   
   // AI suggestions state
@@ -102,7 +102,7 @@ export default function MatchesPage() {
         const data = await res.json();
         console.log('Match API data:', data); // Debug log
         console.log('Number of matches found:', data.matches?.length || 0); // Debug log
-        setMatches(data.matches || []);
+        setConnections(data.matches || []);
       } catch (err) {
         console.error('Error fetching matches:', err); // Debug log
         setError("Failed to load matches.");
@@ -176,17 +176,17 @@ export default function MatchesPage() {
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-center">Your Matches</h1>
+          <h1 className="text-3xl font-bold text-center">Your Connections</h1>
         </div>
         {loading ? (
-          <div className="text-center text-gray-500">Loading matches...</div>
+          <div className="text-center text-gray-500">Loading connections...</div>
         ) : error ? (
           <div className="text-center text-red-600">{error}</div>
-        ) : matches.length === 0 ? (
-          <div className="text-center text-gray-500">No matches found.</div>
+        ) : connections.length === 0 ? (
+          <div className="text-center text-gray-500">No connections found.</div>
         ) : (
           <div className="grid gap-6">
-            {matches.map((match, i) => (
+            {connections.map((match, i) => (
               <div key={i} className="bg-white rounded-lg shadow p-6">
                 <div className="mb-2 font-semibold text-lg">Group:</div>
                 <ul className="mb-2">

@@ -1,7 +1,7 @@
 "use client";
 import { usePathname } from 'next/navigation';
 import UserSearchBar from './UserSearchBar';
-import UserMatchesBar from './UserMatchesBar';
+import UserConnectionsBar from './UserConnectionsBar';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -16,7 +16,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
       {pathname !== '/' && <UserSearchBar className="max-w-2xl mx-auto" />}
-      {pathname !== '/' && <UserMatchesBar className="max-w-2xl mx-auto" />}
+      {pathname !== '/' && <UserConnectionsBar className="max-w-2xl mx-auto" />}
       <main>{children}</main>
     </>
   );

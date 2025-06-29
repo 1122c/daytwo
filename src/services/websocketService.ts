@@ -1,5 +1,4 @@
 // Placeholder for websocket service
-import { OpenAI } from 'openai';
 
 // User profile structure for AI-assisted matching
 export interface UserProfile {
