@@ -1,11 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { OpenAI } from 'openai';
 import { adminAuth } from '@/services/firebaseAdmin';
-
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -39,25 +33,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!userProfile || !matchProfile) {
     return res.status(400).json({ error: 'userProfile and matchProfile are required' });
   }
-
-  const prompt = `Generate 3 engaging conversation starters based on these user profiles:
-
-User 1 (${userProfile.name}):
-- Core Values: ${userProfile.values?.join(', ') || ''}
-- Personal Goals: ${userProfile.goals?.join(', ') || ''}
-
-User 2 (${matchProfile.name}):
-- Core Values: ${matchProfile.values?.join(', ') || ''}
-- Personal Goals: ${matchProfile.goals?.join(', ') || ''}
-
-Generate 3 conversation starters that:
-1. Reference shared values or goals
-2. Are open-ended and encourage discussion
-3. Show genuine interest in the other person
-4. Are professional but friendly
-5. Avoid generic or cliché questions
-
-Format each starter on a new line.`;
 
   try {
     console.log('Using mock conversation starters');

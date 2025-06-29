@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { db } from '@/services/firebase';
 import { collection, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 interface Profile {

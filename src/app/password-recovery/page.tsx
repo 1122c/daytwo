@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { auth } from "@/services/firebase";
-import { sendPasswordResetEmail, User } from "firebase/auth";
+import { sendPasswordResetEmail } from "firebase/auth";
 import Link from "next/link";
 
 export default function PasswordRecoveryPage() {
@@ -18,8 +18,8 @@ export default function PasswordRecoveryPage() {
     try {
       await sendPasswordResetEmail(auth, email);
       setSuccess("Password reset email sent!");
-    } catch (err: any) {
-      setError(err.message || "Failed to send reset email");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to send reset email");
     } finally {
       setLoading(false);
     }
