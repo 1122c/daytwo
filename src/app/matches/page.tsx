@@ -40,34 +40,78 @@ export default function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  // New state for AI suggestions
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  
+  // AI suggestions state
   const [starters, setStarters] = useState<Record<number, string[]>>({});
   const [startersLoading, setStartersLoading] = useState<Record<number, boolean>>({});
   const [startersError, setStartersError] = useState<Record<number, string>>({});
   const [iceBreakers, setIceBreakers] = useState<Record<number, string[]>>({});
   const [iceBreakersLoading, setIceBreakersLoading] = useState<Record<number, boolean>>({});
   const [iceBreakersError, setIceBreakersError] = useState<Record<number, string>>({});
-  const [growthSuggestions, setGrowthSuggestions] = useState<Record<number, string[]>>({});
-  const [growthLoading, setGrowthLoading] = useState<Record<number, boolean>>({});
-  const [growthError, setGrowthError] = useState<Record<number, string>>({});
+  const [promptType, setPromptType] = useState<Record<number, 'icebreaker' | 'starter'>>({});
+
   const router = useRouter();
 
+  // Add auth state listener
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setAuthUser(user);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Update fetchMatches to use authUser instead of auth.currentUser
   useEffect(() => {
     async function fetchMatches() {
+      // Don't fetch until auth is loaded
+      if (authLoading) return;
+      
       setLoading(true);
       setError("");
       try {
-        const res = await fetch("/api/match");
+        console.log('Fetching matches...'); // Debug log
+        console.log('Auth user:', authUser); // Debug log
+        
+        // Check authUser instead of auth.currentUser
+        if (!authUser) {
+          setError("You must be logged in to view matches.");
+          setLoading(false);
+          return;
+        }
+        
+        const idToken = await authUser.getIdToken();
+        
+        const res = await fetch("/api/match", {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+          },
+        });
+        
+        console.log('Match API response status:', res.status); // Debug log
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.log('Match API error:', errorData); // Debug log
+          throw new Error(`HTTP ${res.status}: ${errorData.error || 'Unknown error'}`);
+        }
+        
         const data = await res.json();
+        console.log('Match API data:', data); // Debug log
+        console.log('Number of matches found:', data.matches?.length || 0); // Debug log
         setMatches(data.matches || []);
-      } catch {
+      } catch (err) {
+        console.error('Error fetching matches:', err); // Debug log
         setError("Failed to load matches.");
       } finally {
         setLoading(false);
       }
     }
     fetchMatches();
-  }, []);
+  }, [authUser, authLoading]);
 
   // Helper to get the first two profiles in a match group
   function getPair(match: Match) {
@@ -79,7 +123,7 @@ export default function MatchesPage() {
     setStartersError((prev) => ({ ...prev, [i]: "" }));
     const [userProfile, matchProfile] = getPair(match);
     try {
-      const idToken = await auth.currentUser?.getIdToken();
+      const idToken = await authUser?.getIdToken();
       const res = await fetch("/api/conversation-starters", {
         method: "POST",
         headers: {
@@ -106,7 +150,7 @@ export default function MatchesPage() {
     setIceBreakersError((prev) => ({ ...prev, [i]: "" }));
     const [userProfile, matchProfile] = getPair(match);
     try {
-      const idToken = await auth.currentUser?.getIdToken();
+      const idToken = await authUser?.getIdToken();
       const res = await fetch("/api/ice-breakers", {
         method: "POST",
         headers: {
@@ -125,33 +169,6 @@ export default function MatchesPage() {
       setIceBreakersError((prev) => ({ ...prev, [i]: "Failed to fetch ice breakers." }));
     } finally {
       setIceBreakersLoading((prev) => ({ ...prev, [i]: false }));
-    }
-  }
-
-  async function handleFetchGrowthSuggestions(i: number, match: Match) {
-    setGrowthLoading((prev) => ({ ...prev, [i]: true }));
-    setGrowthError((prev) => ({ ...prev, [i]: "" }));
-    const [userProfile, matchProfile] = getPair(match);
-    try {
-      const idToken = await auth.currentUser?.getIdToken();
-      const res = await fetch("/api/growth-suggestions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
-        },
-        body: JSON.stringify({ userProfile, matchProfile }),
-      });
-      const data = await res.json();
-      if (data.suggestions) {
-        setGrowthSuggestions((prev) => ({ ...prev, [i]: data.suggestions }));
-      } else {
-        setGrowthError((prev) => ({ ...prev, [i]: "No suggestions found." }));
-      }
-    } catch {
-      setGrowthError((prev) => ({ ...prev, [i]: "Failed to fetch growth suggestions." }));
-    } finally {
-      setGrowthLoading((prev) => ({ ...prev, [i]: false }));
     }
   }
 
@@ -213,48 +230,80 @@ export default function MatchesPage() {
                     <span className="font-semibold">Why you matched:</span> {match.explanation}
                   </div>
                 )}
-                {/* AI Suggestions Buttons and Results */}
-                <div className="mt-4 flex flex-wrap gap-2">
+                {/* Prompt Type Toggle */}
+                <div className="mt-6 mb-2 flex gap-2 items-center">
                   <button
-                    className="px-3 py-1 bg-blue-500 text-white rounded text-sm disabled:opacity-50"
-                    onClick={() => handleFetchStarters(i, match)}
-                    disabled={startersLoading[i]}
+                    className={`px-3 py-1 rounded-l-md border ${promptType[i] !== 'starter' ? 'bg-blue-600 text-white' : 'bg-white text-blue-700 border-blue-600'} transition-colors`}
+                    onClick={() => setPromptType((prev) => ({ ...prev, [i]: 'icebreaker' }))}
                   >
-                    {startersLoading[i] ? "Loading..." : "Show Conversation Starters"}
+                    🧊 Ice Breakers
                   </button>
                   <button
-                    className="px-3 py-1 bg-green-500 text-white rounded text-sm disabled:opacity-50"
-                    onClick={() => handleFetchIceBreakers(i, match)}
-                    disabled={iceBreakersLoading[i]}
+                    className={`px-3 py-1 rounded-r-md border-l-0 border ${promptType[i] === 'starter' ? 'bg-green-600 text-white' : 'bg-white text-green-700 border-green-600'} transition-colors`}
+                    onClick={() => setPromptType((prev) => ({ ...prev, [i]: 'starter' }))}
                   >
-                    {iceBreakersLoading[i] ? "Loading..." : "Show Ice Breakers"}
+                    💬 Conversation Starters
                   </button>
+                </div>
+                {/* Descriptions */}
+                {promptType[i] !== 'starter' ? (
+                  <div className="text-sm text-blue-700 mb-2">
+                    <span className="font-semibold">Ice Breakers:</span> Fun, light questions to break the ice and get the conversation started. Great for first messages or when things feel awkward.
+                  </div>
+                ) : (
+                  <div className="text-sm text-green-700 mb-2">
+                    <span className="font-semibold">Conversation Starters:</span> Thoughtful prompts based on your shared interests and values. Perfect for deeper, more meaningful conversations.
+                  </div>
+                )}
+                {/* Prompt Buttons and Results */}
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {promptType[i] !== 'starter' ? (
+                    <button
+                      className="px-3 py-1 bg-blue-500 text-white rounded text-sm disabled:opacity-50"
+                      onClick={() => handleFetchIceBreakers(i, match)}
+                      disabled={iceBreakersLoading[i]}
+                    >
+                      {iceBreakersLoading[i] ? "Loading..." : "Show Ice Breakers"}
+                    </button>
+                  ) : (
+                    <button
+                      className="px-3 py-1 bg-green-500 text-white rounded text-sm disabled:opacity-50"
+                      onClick={() => handleFetchStarters(i, match)}
+                      disabled={startersLoading[i]}
+                    >
+                      {startersLoading[i] ? "Loading..." : "Show Conversation Starters"}
+                    </button>
+                  )}
                   <button
-                    className="px-3 py-1 bg-purple-500 text-white rounded text-sm disabled:opacity-50"
-                    onClick={() => handleFetchGrowthSuggestions(i, match)}
-                    disabled={growthLoading[i]}
+                    className="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600"
+                    onClick={() => {
+                      const matchProfile = getPair(match)[1];
+                      const targetUserId = matchProfile.id;
+                      router.push(`/chat?user=${targetUserId}`);
+                    }}
                   >
-                    {growthLoading[i] ? "Loading..." : "Show Growth Suggestions"}
+                    Start Chat
                   </button>
                 </div>
                 {/* Results */}
-                {startersError[i] && <div className="text-red-600 text-sm mt-2">{startersError[i]}</div>}
-                {starters[i] && (
-                  <ul className="mt-2 text-sm bg-blue-50 rounded p-2">
-                    {starters[i].map((s, idx) => <li key={idx}>💬 {s}</li>)}
-                  </ul>
-                )}
-                {iceBreakersError[i] && <div className="text-red-600 text-sm mt-2">{iceBreakersError[i]}</div>}
-                {iceBreakers[i] && (
-                  <ul className="mt-2 text-sm bg-green-50 rounded p-2">
-                    {iceBreakers[i].map((s, idx) => <li key={idx}>🎲 {s}</li>)}
-                  </ul>
-                )}
-                {growthError[i] && <div className="text-red-600 text-sm mt-2">{growthError[i]}</div>}
-                {growthSuggestions[i] && (
-                  <ul className="mt-2 text-sm bg-purple-50 rounded p-2">
-                    {growthSuggestions[i].map((s, idx) => <li key={idx}>🌱 {s}</li>)}
-                  </ul>
+                {promptType[i] !== 'starter' ? (
+                  <>
+                    {iceBreakersError[i] && <div className="text-red-600 text-sm mt-2">{iceBreakersError[i]}</div>}
+                    {iceBreakers[i] && (
+                      <ul className="mt-2 text-sm bg-blue-50 rounded p-2">
+                        {iceBreakers[i].map((s, idx) => <li key={idx}>🎲 {s}</li>)}
+                      </ul>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {startersError[i] && <div className="text-red-600 text-sm mt-2">{startersError[i]}</div>}
+                    {starters[i] && (
+                      <ul className="mt-2 text-sm bg-green-50 rounded p-2">
+                        {starters[i].map((s, idx) => <li key={idx}>💡 {s}</li>)}
+                      </ul>
+                    )}
+                  </>
                 )}
               </div>
             ))}
@@ -263,4 +312,4 @@ export default function MatchesPage() {
       </div>
     </div>
   );
-} 
+}

@@ -1,61 +1,50 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth } from '@/services/firebaseAdmin';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { OpenAI } from 'openai';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  // Auth check
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized: Missing token' });
-  }
-  const idToken = authHeader.split('Bearer ')[1];
-  try {
-    await adminAuth.verifyIdToken(idToken);
-  } catch {
-    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
-  }
+  if (req.method !== 'POST') return res.status(405).end();
 
   const { userProfile, matchProfile } = req.body;
-  if (!userProfile || !matchProfile) {
-    return res.status(400).json({ error: 'userProfile and matchProfile are required' });
-  }
 
-  // Compose the prompt using the current profile structure
-  const prompt = `Generate 3 fun ice breaker activities based on these user profiles:
+  const prompt = `
+You are an expert at helping people break the ice and start fun, light conversations. 
+Given the following two user profiles, generate 5 personalized ice breaker questions or activities that would help them get to know each other. 
+Make the ice breakers relevant to their shared or unique interests, values, or goals. 
+Keep them friendly, inclusive, and easy to answer.
 
-User 1 (${userProfile.name}):
-- Core Values: ${userProfile.values?.join(', ') || ''}
-- Personal Goals: ${userProfile.goals?.join(', ') || ''}
-- Communication Preferences: ${userProfile.communicationStyle?.join(', ') || ''}
+User 1:
+- Name: ${userProfile.name}
+- Interests: ${userProfile.interests?.join(', ') || 'N/A'}
+- Values: ${userProfile.values?.join(', ') || 'N/A'}
+- Goals: ${userProfile.goals?.join(', ') || 'N/A'}
 
-User 2 (${matchProfile.name}):
-- Core Values: ${matchProfile.values?.join(', ') || ''}
-- Personal Goals: ${matchProfile.goals?.join(', ') || ''}
-- Communication Preferences: ${matchProfile.communicationStyle?.join(', ') || ''}
+User 2:
+- Name: ${matchProfile.name}
+- Interests: ${matchProfile.interests?.join(', ') || 'N/A'}
+- Values: ${matchProfile.values?.join(', ') || 'N/A'}
+- Goals: ${matchProfile.goals?.join(', ') || 'N/A'}
 
-Generate 3 ice breaker activities that:
-1. Are appropriate for their communication preferences
-2. Help build rapport quickly
-3. Are engaging and fun
-4. Can be done in a short time
-5. Don't require special equipment
+Output as a JSON array of strings.
+`;
 
-Format each activity on a new line.`;
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.8,
+    max_tokens: 300,
+  });
 
+  // Try to parse the response as JSON
+  let iceBreakers: string[] = [];
   try {
-    const openaiRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/openai`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    });
-    const data = await openaiRes.json();
-    if (!data.result) throw new Error('No result from OpenAI');
-    const activities = data.result.split('\n').filter(Boolean);
-    res.status(200).json({ activities });
+    const text = completion.choices[0].message.content?.trim() || '';
+    iceBreakers = JSON.parse(text);
   } catch {
-    res.status(500).json({ error: 'Failed to generate ice breakers' });
+    // fallback: return as a single string in an array
+    iceBreakers = [completion.choices[0].message.content || ''];
   }
+
+  res.status(200).json({ activities: iceBreakers });
 } 

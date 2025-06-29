@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { db } from '@/services/firebase';
 import { collection, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface Profile {
   id: string;
@@ -29,6 +30,7 @@ export default function ProfileDiscoveryPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchProfiles() {
@@ -91,6 +93,14 @@ export default function ProfileDiscoveryPage() {
                     </ul>
                   </div>
                 )}
+                <div className="mt-4">
+                  <button
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    onClick={() => router.push(`/chat?user=${profile.id}`)}
+                  >
+                    Start Chat
+                  </button>
+                </div>
               </div>
             ))
           )}

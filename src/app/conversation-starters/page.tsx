@@ -4,6 +4,7 @@ import { auth, db } from '@/services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import type { UserProfile } from '@/services/websocketService';
 import type { User } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 export default function ConversationStartersPage() {
   const [authUser, setAuthUser] = useState<User | null>(null);
@@ -12,6 +13,7 @@ export default function ConversationStartersPage() {
   const [starters, setStarters] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => setAuthUser(user));
@@ -50,11 +52,17 @@ export default function ConversationStartersPage() {
       if (!res.ok) throw new Error('Failed to generate conversation starters');
       const data = await res.json();
       setStarters(data.starters || []);
-    } catch (e: any) {
-      setError(e.message || 'Error generating conversation starters');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error generating conversation starters');
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleStartChat() {
+    if (!selectedUserId) return;
+    // Navigate to chat page with the selected user
+    router.push(`/chat?user=${selectedUserId}`);
   }
 
   return (
@@ -85,9 +93,17 @@ export default function ConversationStartersPage() {
       </button>
       {error && <div className="text-red-600 mt-2">{error}</div>}
       {starters.length > 0 && (
-        <ul className="mt-4 bg-blue-50 rounded p-4">
-          {starters.map((s, i) => <li key={i}>💬 {s}</li>)}
-        </ul>
+        <div className="mt-4">
+          <ul className="bg-blue-50 rounded p-4 mb-4">
+            {starters.map((s, i) => <li key={i}>💬 {s}</li>)}
+          </ul>
+          <button
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            onClick={handleStartChat}
+          >
+            Start Chat with {users.find(u => u.id === selectedUserId)?.name}
+          </button>
+        </div>
       )}
     </div>
   );
