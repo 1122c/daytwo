@@ -1,3 +1,53 @@
+# day-one
+
+An intentional, human-centered connections platform powered by AI. ConnectMind helps professionals and friends form meaningful relationships by thoughtfully matching people based on shared values, goals, communication preferences, and social profiles—and then providing ongoing prompts and insights to keep those relationships growing.
+
+---
+
+## 🚀 Features
+
+- **Reflective Onboarding**  
+  Users share their name, bio, core values, personal goals, and communication style.
+
+- **Social Profile Integration**  
+  Optionally link public profiles (LinkedIn, Twitter, Instagram, TikTok, OnlyFans) to enrich your network presence.
+
+- **AI-Assisted Matching**  
+  GPT-powered compatibility analysis generates plain-language explanations of why two (or more) users are a good fit.
+
+- **Continuous Relational Support**  
+  Post-match prompts, reflection questions, and friction-point insights to help connections thrive.
+
+- **Secure Data Layer**  
+  Built on Firebase Auth, Firestore, and Storage for fast, secure persistence.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Next.js 14 (App Router)**  
+- **React 18 + TypeScript**  
+- **Firebase**  
+  - Authentication  
+  - Firestore (NoSQL database)  
+  - Storage (for any user-uploaded assets)  
+- **OpenAI API**   
+- **Tailwind CSS** (utility-first styling)  
+- **Framer Motion** (animations)  
+- **React Hook Form + Zod** (form state & validation)  
+- **Jest & Testing Library** (unit/integration tests)  
+- **ts-node** (scripted utilities)
+
+---
+
+## 📦 Installation
+
+1. **Clone the repo**  
+   ```bash
+   git clone https://github.com/your-username/connectmind.git
+   cd connectmind
+
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
