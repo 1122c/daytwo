@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { db, auth } from "@/services/firebase";
-import { setDoc, doc } from "firebase/firestore";
+import { setDoc, doc, getDocs, collection, query, where } from "firebase/firestore";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
@@ -56,6 +56,8 @@ export default function OnboardingForm() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState<User | null>(null);
+  const [username, setUsername] = useState("");
+  const [usernameError, setUsernameError] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -81,55 +83,67 @@ export default function OnboardingForm() {
     }
   }
 
+  // Username uniqueness check
+  async function checkUsernameUnique(name: string) {
+    if (!name.trim()) return false;
+    const q = query(collection(db, "profiles"), where("name", "==", name.trim()));
+    const snap = await getDocs(q);
+    // If editing, allow the current user to keep their username
+    if (snap.empty) return true;
+    if (snap.docs.length === 1 && snap.docs[0].id === user?.uid) return true;
+    return false;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
-  e.preventDefault();
-  console.log('🚀 Form submitted!'); // Debug log
-  setLoading(true);
-  setError("");
-  setSuccess(false);
-  if (!user) {
-    setError("You must be logged in to submit your profile.");
-    setLoading(false);
-    return;
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess(false);
+    setUsernameError("");
+    if (!user) {
+      setError("You must be logged in to submit your profile.");
+      setLoading(false);
+      return;
+    }
+    // Username required and must be unique
+    if (!username.trim()) {
+      setUsernameError("Username is required.");
+      setLoading(false);
+      return;
+    }
+    const isUnique = await checkUsernameUnique(username.trim());
+    if (!isUnique) {
+      setUsernameError("That username is already taken. Please choose another.");
+      setLoading(false);
+      return;
+    }
+    try {
+      await setDoc(doc(db, "profiles", user.uid), {
+        values: values ? values.split(",").map((v) => v.trim().toLowerCase()).filter(Boolean) : [],
+        goals: goals ? goals.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
+        preferences: preferences ? preferences.split(",").map((p) => p.trim().toLowerCase()).filter(Boolean) : [],
+        communicationStyle: communicationStyle ? communicationStyle.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [],
+        interests: interests ? interests.split(",").map((i) => i.trim().toLowerCase()).filter(Boolean) : [],
+        connectionType: connectionType ? connectionType.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [],
+        growthAreas: growthAreas ? growthAreas.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
+        availability: availability ? availability.split(",").map((a) => a.trim().toLowerCase()).filter(Boolean) : [],
+        location: location ? location.trim() : "",
+        timezone: timezone ? timezone.trim() : "",
+        identityTags: identityTags ? identityTags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean) : [],
+        publicProfiles: profiles,
+        createdAt: new Date(),
+        name: username.trim(), // Use chosen username
+        uid: user.uid,
+        email: user.email || "",
+      });
+      setSuccess(true);
+      router.push("/dashboard");
+    } catch (error) {
+      setError("Failed to save profile. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
-  
-  console.log('✅ User authenticated:', user.uid); // Debug log
-  
-  try {
-    console.log('💾 Saving profile to Firestore...'); // Debug log
-    await setDoc(doc(db, "profiles", user.uid), {
-      values: values ? values.split(",").map((v) => v.trim().toLowerCase()).filter(Boolean) : [],
-      goals: goals ? goals.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
-      preferences: preferences ? preferences.split(",").map((p) => p.trim().toLowerCase()).filter(Boolean) : [],
-      communicationStyle: communicationStyle ? communicationStyle.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [],
-      interests: interests ? interests.split(",").map((i) => i.trim().toLowerCase()).filter(Boolean) : [],
-      connectionType: connectionType ? connectionType.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [],
-      growthAreas: growthAreas ? growthAreas.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
-      availability: availability ? availability.split(",").map((a) => a.trim().toLowerCase()).filter(Boolean) : [],
-      location: location ? location.trim() : "",
-      timezone: timezone ? timezone.trim() : "",
-      identityTags: identityTags ? identityTags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean) : [],
-      publicProfiles: profiles,
-      createdAt: new Date(),
-      name: user.displayName || user.email || "",
-      uid: user.uid,
-    });
-    
-    console.log('✅ Profile saved successfully!'); // Debug log
-    setSuccess(true);
-    console.log('🔄 Attempting redirect to dashboard...'); // Debug log
-    
-    // Try immediate redirect instead of setTimeout
-    router.push("/dashboard");
-    console.log('✅ Router.push called'); // Debug log
-    
-  } catch (error) {
-    console.error('❌ Error saving profile:', error); // Debug log
-    setError("Failed to save profile. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-}
 
   return (
     <form
@@ -151,6 +165,19 @@ export default function OnboardingForm() {
         )}
         {step === 0 && (
           <div>
+            <label className="block mb-2 font-semibold">Choose a username</label>
+            <input
+              className="w-full border rounded p-2 mb-2"
+              type="text"
+              placeholder="e.g. rachel, dayonefan, mentor_jane"
+              value={username}
+              onChange={e => { setUsername(e.target.value); setUsernameError(""); }}
+              required
+              disabled={!user}
+              spellCheck={false}
+              maxLength={32}
+            />
+            {usernameError && <div className="text-red-600 text-sm mb-2">{usernameError}</div>}
             <label className="block mb-2 font-semibold">What are your core values?</label>
             <div className="text-xs text-gray-500 mb-1">e.g. what matters most to you in relationships and life?</div>
             <div className="flex flex-wrap gap-2 mb-2">

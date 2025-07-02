@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { auth, db, storage } from '@/services/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged, User, updateEmail } from 'firebase/auth';
+import { doc, getDoc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import React from 'react';
@@ -38,6 +38,10 @@ export default function DashboardPage() {
   const router = useRouter();
   const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
   const [picUploading, setPicUploading] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Auth check with improved logic
   useEffect(() => {
@@ -85,8 +89,9 @@ export default function DashboardPage() {
               onlyfans: data.publicProfiles?.onlyfans || '',
             },
           });
+          setEmail(data.email || authUser?.email || '');
         } else {
-          console.log('No profile found for user, showing empty form');
+          setEmail(authUser?.email || '');
         }
       } catch (err) {
         console.error('Error fetching profile:', err);
@@ -142,18 +147,64 @@ export default function DashboardPage() {
     }
   }
 
+  async function checkUsernameUnique(name: string) {
+    if (!name.trim()) return false;
+    const q = query(collection(db, 'profiles'), where('name', '==', name.trim()));
+    const snap = await getDocs(q);
+    // Allow the current user to keep their username
+    if (snap.empty) return true;
+    if (snap.docs.length === 1 && snap.docs[0].id === authUser?.uid) return true;
+    return false;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!authUser) {
       return;
     }
-    
     setSaving(true);
-    
+    setUsernameError('');
+    setEmailError('');
+    setSaveSuccess(false);
+    // Username required and must be unique
+    if (!profile.name.trim()) {
+      setUsernameError('Username is required.');
+      setSaving(false);
+      return;
+    }
+    const isUnique = await checkUsernameUnique(profile.name.trim());
+    if (!isUnique) {
+      setUsernameError('That username is already taken. Please choose another.');
+      setSaving(false);
+      return;
+    }
+    // Email required and must be valid
+    if (!email.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      setEmailError('A valid email address is required.');
+      setSaving(false);
+      return;
+    }
+    // If email changed, update in Firebase Auth
+    if (email.trim() !== authUser.email) {
+      try {
+        await updateEmail(authUser, email.trim());
+      } catch (err: unknown) {
+        let msg = 'Failed to update email.';
+        if (typeof err === 'object' && err && 'message' in err) {
+          const errorWithMessage = err as { message?: string };
+          if (typeof errorWithMessage.message === 'string') {
+            msg = errorWithMessage.message;
+          }
+        }
+        setEmailError(msg);
+        setSaving(false);
+        return;
+      }
+    }
     try {
-      console.log('Saving profile for user:', authUser.uid);
       await setDoc(doc(db, 'profiles', authUser.uid), {
-        name: profile.name,
+        name: profile.name.trim(),
+        email: email.trim(),
         values: profile.values ? profile.values.split(',').map((v) => v.trim().toLowerCase()).filter(Boolean) : [],
         goals: profile.goals ? profile.goals.split(',').map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
         preferences: profile.preferences ? profile.preferences.split(',').map((p) => p.trim().toLowerCase()).filter(Boolean) : [],
@@ -169,13 +220,22 @@ export default function DashboardPage() {
         uid: authUser.uid,
         updatedAt: new Date(),
       }, { merge: true });
-      
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
       console.log('Profile saved successfully');
     } catch (err) {
       console.error('Error saving profile:', err);
     } finally {
       setSaving(false);
     }
+  }
+
+  // Hide confirmation when user edits any field
+  function handleFieldEdit<T extends unknown[]>(fn: (...args: T) => void) {
+    return (...args: T) => {
+      setSaveSuccess(false);
+      fn(...args);
+    };
   }
 
   async function handlePicUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -239,15 +299,34 @@ export default function DashboardPage() {
         </div>
         {/* About You Section */}
         <form className="w-full" onSubmit={handleSubmit}>
+          {saveSuccess && (
+            <div className="mb-4 p-2 bg-green-100 text-green-800 rounded text-center animate-fade-in">
+              Profile updated successfully!
+            </div>
+          )}
           <h2 className="text-lg font-bold mb-2 mt-2">About You</h2>
+          <label className="block mb-2 font-semibold">Email</label>
+          <input
+            className="w-full border rounded p-2 mb-2"
+            type="email"
+            value={email}
+            onChange={handleFieldEdit(e => { setEmail(e.target.value); setEmailError(''); })}
+            placeholder="e.g. you@email.com"
+            required
+            maxLength={64}
+          />
+          {emailError && <div className="text-red-600 text-sm mb-2">{emailError}</div>}
           <label className="block mb-2 font-semibold">Name</label>
           <input
-            className="w-full border rounded p-2 mb-4"
+            className="w-full border rounded p-2 mb-2"
             type="text"
             value={profile.name}
-            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-            placeholder="e.g. Alice Smith"
+            onChange={handleFieldEdit((e) => { setProfile({ ...profile, name: e.target.value }); setUsernameError(''); })}
+            placeholder="e.g. rachel, dayonefan, mentor_jane"
+            required
+            maxLength={32}
           />
+          {usernameError && <div className="text-red-600 text-sm mb-2">{usernameError}</div>}
           <label className="block mb-2 font-semibold">Values (comma separated)</label>
           <div className="text-xs text-gray-500 mb-1">e.g. what matters most to you in relationships and life?</div>
           <div className="flex flex-wrap gap-2 mb-2">
@@ -259,7 +338,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-4"
             type="text"
             value={profile.values}
-            onChange={(e) => setProfile({ ...profile, values: e.target.value })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, values: e.target.value }))}
             placeholder="e.g. empathy, growth, curiosity"
             spellCheck={true}
           />
@@ -274,7 +353,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-4"
             type="text"
             value={profile.goals}
-            onChange={(e) => setProfile({ ...profile, goals: e.target.value })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, goals: e.target.value }))}
             placeholder="e.g. find a mentor, make friends"
             spellCheck={true}
           />
@@ -289,7 +368,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-4"
             type="text"
             value={profile.preferences}
-            onChange={(e) => setProfile({ ...profile, preferences: e.target.value })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, preferences: e.target.value }))}
             placeholder="e.g. small group, remote, in-person"
             spellCheck={true}
           />
@@ -304,7 +383,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-4"
             type="text"
             value={profile.communicationStyle}
-            onChange={(e) => setProfile({ ...profile, communicationStyle: e.target.value })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, communicationStyle: e.target.value }))}
             placeholder="e.g. direct, reflective, supportive, analytical"
             spellCheck={true}
           />
@@ -319,7 +398,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-4"
             type="text"
             value={profile.interests}
-            onChange={(e) => setProfile({ ...profile, interests: e.target.value })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, interests: e.target.value }))}
             placeholder="e.g. art, tech, outdoors, music, volunteering"
             spellCheck={true}
           />
@@ -334,7 +413,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-4"
             type="text"
             value={profile.connectionType}
-            onChange={(e) => setProfile({ ...profile, connectionType: e.target.value })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, connectionType: e.target.value }))}
             placeholder="e.g. mentorship, collaboration, friendship, accountability partner"
             spellCheck={true}
           />
@@ -349,7 +428,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-4"
             type="text"
             value={profile.growthAreas}
-            onChange={(e) => setProfile({ ...profile, growthAreas: e.target.value })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, growthAreas: e.target.value }))}
             placeholder="e.g. leadership, emotional intelligence, public speaking"
             spellCheck={true}
           />
@@ -364,7 +443,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-4"
             type="text"
             value={profile.availability}
-            onChange={(e) => setProfile({ ...profile, availability: e.target.value })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, availability: e.target.value }))}
             placeholder="e.g. weekdays, evenings, weekends, flexible"
             spellCheck={true}
           />
@@ -379,7 +458,7 @@ export default function DashboardPage() {
             className="w-full border rounded p-2 mb-4"
             type="text"
             value={profile.identityTags}
-            onChange={(e) => setProfile({ ...profile, identityTags: e.target.value })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, identityTags: e.target.value }))}
             placeholder="e.g. LGBTQ+, Women in Tech, BIPOC"
             spellCheck={true}
           />
@@ -390,7 +469,7 @@ export default function DashboardPage() {
             type="url"
             placeholder="LinkedIn URL"
             value={profile.publicProfiles?.linkedin}
-            onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, linkedin: e.target.value } })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, linkedin: e.target.value } }))}
           />
           <label className="block mb-2 font-semibold">Twitter URL</label>
           <input
@@ -398,7 +477,7 @@ export default function DashboardPage() {
             type="url"
             placeholder="Twitter URL"
             value={profile.publicProfiles?.twitter}
-            onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, twitter: e.target.value } })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, twitter: e.target.value } }))}
           />
           <label className="block mb-2 font-semibold">Instagram URL</label>
           <input
@@ -406,7 +485,7 @@ export default function DashboardPage() {
             type="url"
             placeholder="Instagram URL"
             value={profile.publicProfiles?.instagram}
-            onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, instagram: e.target.value } })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, instagram: e.target.value } }))}
           />
           <label className="block mb-2 font-semibold">TikTok URL</label>
           <input
@@ -414,7 +493,7 @@ export default function DashboardPage() {
             type="url"
             placeholder="TikTok URL"
             value={profile.publicProfiles?.tiktok}
-            onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, tiktok: e.target.value } })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, tiktok: e.target.value } }))}
           />
           <label className="block mb-2 font-semibold">OnlyFans URL</label>
           <input
@@ -422,7 +501,7 @@ export default function DashboardPage() {
             type="url"
             placeholder="OnlyFans URL"
             value={profile.publicProfiles?.onlyfans}
-            onChange={(e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, onlyfans: e.target.value } })}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, onlyfans: e.target.value } }))}
           />
           <button
             type="submit"

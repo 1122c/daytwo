@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { db } from '@/services/firebase';
-import { collection, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { collection, getDocs, QueryDocumentSnapshot, DocumentData, query, where, deleteDoc, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -52,6 +52,10 @@ export default function ProfileDiscoveryPage() {
   const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null);
   const [compatLoading, setCompatLoading] = useState(false);
   const router = useRouter();
+  const [connectLoading, setConnectLoading] = useState<Record<string, boolean>>({});
+  const [connectSuccess, setConnectSuccess] = useState<Record<string, boolean>>({});
+  const [connectError, setConnectError] = useState<Record<string, string>>({});
+  const [pendingRequests, setPendingRequests] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function fetchProfiles() {
@@ -102,12 +106,74 @@ export default function ProfileDiscoveryPage() {
     fetchCompatScores();
   }, [profiles, currentUserProfile, filter]);
 
+  useEffect(() => {
+    async function fetchPendingRequests() {
+      if (!user) {
+        setPendingRequests({});
+        return;
+      }
+      const q = query(collection(db, 'matchRequests'), where('fromUserId', '==', user.uid), where('status', '==', 'pending'));
+      const snap = await getDocs(q);
+      const pending: Record<string, string> = {};
+      snap.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.toUserId) {
+          pending[data.toUserId] = docSnap.id;
+        }
+      });
+      setPendingRequests(pending);
+    }
+    fetchPendingRequests();
+  }, [user, connectSuccess]);
+
   // Filter/sort profiles based on filter
   let shownProfiles = profiles.filter(p => !currentUserProfile || p.id !== currentUserProfile.id);
   if (filter === 'compatible') {
     shownProfiles = shownProfiles.filter(p => compatScores[p.id] >= 70);
   } else if (filter === 'best') {
     shownProfiles = [...shownProfiles].sort((a, b) => (compatScores[b.id] || 0) - (compatScores[a.id] || 0));
+  }
+
+  async function handleConnect(toUserId: string) {
+    if (!user) return;
+    setConnectLoading((prev) => ({ ...prev, [toUserId]: true }));
+    setConnectError((prev) => ({ ...prev, [toUserId]: '' }));
+    setConnectSuccess((prev) => ({ ...prev, [toUserId]: false }));
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/requestMatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ toUserId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to send connection request');
+      }
+      setConnectSuccess((prev) => ({ ...prev, [toUserId]: true }));
+    } catch (e: unknown) {
+      setConnectError((prev) => ({ ...prev, [toUserId]: e instanceof Error ? e.message : 'Failed to send connection request' }));
+    } finally {
+      setConnectLoading((prev) => ({ ...prev, [toUserId]: false }));
+    }
+  }
+
+  async function handleCancelRequest(toUserId: string) {
+    if (!user || !pendingRequests[toUserId]) return;
+    try {
+      await deleteDoc(doc(db, 'matchRequests', pendingRequests[toUserId]));
+      setPendingRequests((prev) => {
+        const copy = { ...prev };
+        delete copy[toUserId];
+        return copy;
+      });
+      setConnectSuccess((prev) => ({ ...prev, [toUserId]: false }));
+    } catch {
+      setConnectError((prev) => ({ ...prev, [toUserId]: 'Failed to cancel request' }));
+    }
   }
 
   return (
@@ -182,14 +248,37 @@ export default function ProfileDiscoveryPage() {
                     </ul>
                   </div>
                 )}
-                <div className="mt-4">
+                <div className="mt-4 flex gap-2">
                   <button
                     className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                     onClick={() => router.push(`/chat?user=${profile.id}`)}
                   >
                     Start Chat
                   </button>
+                  {pendingRequests[profile.id] ? (
+                    <>
+                      <span className="px-4 py-2 rounded bg-yellow-100 text-yellow-800 border border-yellow-400">Pending Connection Request</span>
+                      <button
+                        className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-60"
+                        onClick={() => handleCancelRequest(profile.id)}
+                        disabled={connectLoading[profile.id]}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-60"
+                      disabled={connectLoading[profile.id] || connectSuccess[profile.id]}
+                      onClick={() => handleConnect(profile.id)}
+                    >
+                      {connectSuccess[profile.id] ? 'Request Sent!' : connectLoading[profile.id] ? 'Sending...' : 'Connect with this user'}
+                    </button>
+                  )}
                 </div>
+                {connectError[profile.id] && (
+                  <div className="text-red-600 text-sm mt-2">{connectError[profile.id]}</div>
+                )}
               </div>
             ))
           )}

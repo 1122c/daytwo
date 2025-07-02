@@ -42,6 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           timezone: data.timezone || '',
           identityTags: Array.isArray(data.identityTags) ? data.identityTags : [],
           publicProfiles: typeof data.publicProfiles === 'object' && data.publicProfiles !== null ? data.publicProfiles : {},
+          email: data.email || '',
         } as UserProfile & {
           communicationStyle?: string[];
           interests?: string[];
@@ -51,6 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           location?: string;
           timezone?: string;
           identityTags?: string[];
+          email?: string;
         };
       })
       .filter(profile => {
@@ -67,7 +69,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           (profile.location && profile.location.toLowerCase().includes(q)) ||
           (profile.timezone && profile.timezone.toLowerCase().includes(q)) ||
           (profile.identityTags && profile.identityTags.some(tag => tag.toLowerCase().includes(q))) ||
-          (profile.publicProfiles && Object.values(profile.publicProfiles).some(url => typeof url === 'string' && url.toLowerCase().includes(q)))
+          (profile.publicProfiles && Object.values(profile.publicProfiles).some(url => typeof url === 'string' && url.toLowerCase().includes(q))) ||
+          (profile.email && profile.email.toLowerCase().includes(q))
         );
       });
     res.status(200).json({ users: matches });
