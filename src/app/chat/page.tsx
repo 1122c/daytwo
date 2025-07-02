@@ -23,6 +23,12 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
+  const [iceBreakers, setIceBreakers] = useState<string[]>([]);
+  const [iceBreakersLoading, setIceBreakersLoading] = useState(false);
+  const [iceBreakersError, setIceBreakersError] = useState('');
+  const [starters, setStarters] = useState<string[]>([]);
+  const [startersLoading, setStartersLoading] = useState(false);
+  const [startersError, setStartersError] = useState('');
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => setAuthUser(user));
@@ -81,6 +87,70 @@ export default function ChatPage() {
     return () => unsubscribe();
   }, [selectedConversation]);
 
+  // Remove the useEffect that automatically fetches prompts
+  // Add button handlers to fetch ice breakers and conversation starters on demand
+  const handleGenerateIceBreakers = async () => {
+    setIceBreakers([]);
+    setIceBreakersError('');
+    if (!authUser || !selectedConversation) return;
+    const conversation = conversations.find(c => c.id === selectedConversation);
+    if (!conversation) return;
+    const otherUserId = conversation.participants.find(id => id !== authUser.uid);
+    if (!otherUserId) return;
+    const selfProfile = users.find(u => u.id === authUser.uid);
+    const otherProfile = users.find(u => u.id === otherUserId);
+    if (!selfProfile || !otherProfile) return;
+    try {
+      setIceBreakersLoading(true);
+      const idToken = await authUser.getIdToken();
+      const res = await fetch('/api/ice-breakers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ userProfile: selfProfile, matchProfile: otherProfile }),
+      });
+      const data = await res.json();
+      setIceBreakers(data.activities || []);
+    } catch {
+      setIceBreakersError('Failed to fetch ice breakers.');
+    } finally {
+      setIceBreakersLoading(false);
+    }
+  };
+
+  const handleGenerateStarters = async () => {
+    setStarters([]);
+    setStartersError('');
+    if (!authUser || !selectedConversation) return;
+    const conversation = conversations.find(c => c.id === selectedConversation);
+    if (!conversation) return;
+    const otherUserId = conversation.participants.find(id => id !== authUser.uid);
+    if (!otherUserId) return;
+    const selfProfile = users.find(u => u.id === authUser.uid);
+    const otherProfile = users.find(u => u.id === otherUserId);
+    if (!selfProfile || !otherProfile) return;
+    try {
+      setStartersLoading(true);
+      const idToken = await authUser.getIdToken();
+      const res = await fetch('/api/conversation-starters', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ userProfile: selfProfile, matchProfile: otherProfile }),
+      });
+      const data = await res.json();
+      setStarters(data.starters || []);
+    } catch {
+      setStartersError('Failed to fetch conversation starters.');
+    } finally {
+      setStartersLoading(false);
+    }
+  };
+
   async function handleSendMessage() {
     if (!authUser || !selectedConversation || !newMessage.trim()) return;
     
@@ -121,7 +191,7 @@ export default function ChatPage() {
     <div className="max-w-4xl mx-auto bg-white rounded shadow p-8 mt-8">
       <h1 className="text-2xl font-bold mb-6">Chat</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Conversations List */}
         <div className="md:col-span-1">
           <h2 className="text-lg font-semibold mb-3">Conversations</h2>
@@ -206,6 +276,89 @@ export default function ChatPage() {
               <p className="text-gray-500">Select a conversation to start chatting.</p>
             </div>
           )}
+        </div>
+
+        {/* Prompts Sidebar */}
+        <div className="md:col-span-1">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold mb-2">Prompts</h2>
+            <div className="mb-2">
+              <span className="font-semibold text-blue-700">🧊 Ice Breakers</span>
+              {iceBreakers.length === 0 ? (
+                <button
+                  className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
+                  onClick={handleGenerateIceBreakers}
+                  disabled={iceBreakersLoading || !selectedConversation}
+                >
+                  {iceBreakersLoading ? 'Loading...' : 'Generate Ice Breakers'}
+                </button>
+              ) : null}
+              {iceBreakersError && <div className="text-red-600 text-sm mt-2">{iceBreakersError}</div>}
+              {iceBreakers.length > 0 && (
+                <>
+                  <ul className="mt-1 text-sm bg-blue-50 rounded p-2">
+                    {iceBreakers.map((q, i) => (
+                      <li key={i} className="mb-1 flex items-center gap-2">
+                        <span>🎲 {q}</span>
+                        <button
+                          className="text-xs text-blue-600 underline"
+                          onClick={() => setNewMessage(q)}
+                          title="Copy to message input"
+                        >
+                          Use
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    className="mt-2 px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs"
+                    onClick={handleGenerateIceBreakers}
+                    disabled={iceBreakersLoading || !selectedConversation}
+                  >
+                    {iceBreakersLoading ? 'Loading...' : 'Click again for new ideas'}
+                  </button>
+                </>
+              )}
+            </div>
+            <div className="mb-2">
+              <span className="font-semibold text-green-700">💬 Conversation Starters</span>
+              {starters.length === 0 ? (
+                <button
+                  className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs"
+                  onClick={handleGenerateStarters}
+                  disabled={startersLoading || !selectedConversation}
+                >
+                  {startersLoading ? 'Loading...' : 'Generate Conversation Starters'}
+                </button>
+              ) : null}
+              {startersError && <div className="text-red-600 text-sm mt-2">{startersError}</div>}
+              {starters.length > 0 && (
+                <>
+                  <ul className="mt-1 text-sm bg-green-50 rounded p-2">
+                    {starters.map((q, i) => (
+                      <li key={i} className="mb-1 flex items-center gap-2">
+                        <span>💡 {q}</span>
+                        <button
+                          className="text-xs text-green-700 underline"
+                          onClick={() => setNewMessage(q)}
+                          title="Copy to message input"
+                        >
+                          Use
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    className="mt-2 px-2 py-1 bg-green-200 text-green-800 rounded text-xs"
+                    onClick={handleGenerateStarters}
+                    disabled={startersLoading || !selectedConversation}
+                  >
+                    {startersLoading ? 'Loading...' : 'Click again for new ideas'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
