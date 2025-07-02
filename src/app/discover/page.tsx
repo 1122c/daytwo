@@ -58,6 +58,7 @@ export default function ProfileDiscoveryPage() {
   const [connectSuccess, setConnectSuccess] = useState<Record<string, boolean>>({});
   const [connectError, setConnectError] = useState<Record<string, string>>({});
   const [pendingRequests, setPendingRequests] = useState<Record<string, string>>({});
+  const [connected, setConnected] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     async function fetchProfiles() {
@@ -135,6 +136,37 @@ export default function ProfileDiscoveryPage() {
   } else if (filter === 'best') {
     shownProfiles = [...shownProfiles].sort((a, b) => (compatScores[b.id] || 0) - (compatScores[a.id] || 0));
   }
+
+  // Fetch connected status for all shown profiles
+  useEffect(() => {
+    async function fetchConnections() {
+      if (!user || shownProfiles.length === 0) {
+        setConnected({});
+        return;
+      }
+      const connections: Record<string, boolean> = {};
+      await Promise.all(shownProfiles.map(async (profile) => {
+        if (profile.id === user.uid) return;
+        // Query for accepted connection in either direction
+        const q1 = query(
+          collection(db, 'matchRequests'),
+          where('fromUserId', '==', user.uid),
+          where('toUserId', '==', profile.id),
+          where('status', '==', 'accepted')
+        );
+        const q2 = query(
+          collection(db, 'matchRequests'),
+          where('fromUserId', '==', profile.id),
+          where('toUserId', '==', user.uid),
+          where('status', '==', 'accepted')
+        );
+        const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+        connections[profile.id] = !snap1.empty || !snap2.empty;
+      }));
+      setConnected(connections);
+    }
+    fetchConnections();
+  }, [user, shownProfiles]);
 
   async function handleConnect(toUserId: string) {
     if (!user) return;
@@ -252,7 +284,7 @@ export default function ProfileDiscoveryPage() {
                 )}
                 <div className="mt-4 flex gap-2">
                   {(() => {
-                    const isConnected = false; // TODO: implement connection check
+                    const isConnected = connected[profile.id];
                     const canChat = profile.allowStrangerChats || isConnected;
                     return (
                       <button
