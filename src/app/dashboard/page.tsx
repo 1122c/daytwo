@@ -31,6 +31,7 @@ export default function DashboardPage() {
       tiktok: '',
       onlyfans: '',
     } as UserProfile['publicProfiles'],
+    allowStrangerChats: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -88,6 +89,7 @@ export default function DashboardPage() {
               tiktok: data.publicProfiles?.tiktok || '',
               onlyfans: data.publicProfiles?.onlyfans || '',
             },
+            allowStrangerChats: data.allowStrangerChats ?? false,
           });
           setEmail(data.email || authUser?.email || '');
         } else {
@@ -217,6 +219,7 @@ export default function DashboardPage() {
         timezone: profile.timezone ? profile.timezone.trim() : '',
         identityTags: profile.identityTags ? profile.identityTags.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean) : [],
         publicProfiles: profile.publicProfiles,
+        allowStrangerChats: profile.allowStrangerChats,
         uid: authUser.uid,
         updatedAt: new Date(),
       }, { merge: true });
@@ -462,6 +465,17 @@ export default function DashboardPage() {
             placeholder="e.g. LGBTQ+, Women in Tech, BIPOC"
             spellCheck={true}
           />
+          <label className="block mb-2 font-semibold">Privacy</label>
+          <div className="flex items-center mb-4">
+            <input
+              type="checkbox"
+              id="allowStrangerChats"
+              checked={profile.allowStrangerChats}
+              onChange={e => setProfile({ ...profile, allowStrangerChats: e.target.checked })}
+              className="mr-2"
+            />
+            <label htmlFor="allowStrangerChats" className="text-sm">Allow users who aren&apos;t connected with me to start a chat</label>
+          </div>
           <h2 className="text-lg font-bold mb-2 mt-6">Social Profiles</h2>
           <label className="block mb-2 font-semibold">LinkedIn URL</label>
           <input

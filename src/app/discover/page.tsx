@@ -13,6 +13,7 @@ interface Profile {
   preferences: string[];
   publicProfiles: Record<string, string>;
   bio?: string;
+  allowStrangerChats?: boolean;
 }
 
 function parseProfile(doc: QueryDocumentSnapshot<DocumentData>): Profile {
@@ -25,6 +26,7 @@ function parseProfile(doc: QueryDocumentSnapshot<DocumentData>): Profile {
     publicProfiles: data.publicProfiles || {},
     name: data.name || 'Anonymous',
     bio: data.bio || '',
+    allowStrangerChats: data.allowStrangerChats ?? false,
   };
 }
 
@@ -249,12 +251,20 @@ export default function ProfileDiscoveryPage() {
                   </div>
                 )}
                 <div className="mt-4 flex gap-2">
-                  <button
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                    onClick={() => router.push(`/chat?user=${profile.id}`)}
-                  >
-                    Start Chat
-                  </button>
+                  {(() => {
+                    const isConnected = false; // TODO: implement connection check
+                    const canChat = profile.allowStrangerChats || isConnected;
+                    return (
+                      <button
+                        className={`bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ${!canChat ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        onClick={() => canChat && router.push(`/chat?user=${profile.id}`)}
+                        disabled={!canChat}
+                        title={!canChat ? 'This user only accepts chats from connections.' : ''}
+                      >
+                        Start Chat
+                      </button>
+                    );
+                  })()}
                   {pendingRequests[profile.id] ? (
                     <>
                       <span className="px-4 py-2 rounded bg-yellow-100 text-yellow-800 border border-yellow-400">Pending Connection Request</span>
