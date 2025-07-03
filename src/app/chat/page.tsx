@@ -87,6 +87,16 @@ export default function ChatPage() {
     return () => unsubscribe();
   }, [selectedConversation]);
 
+  useEffect(() => {
+    if (!selectedConversation) return;
+    setIceBreakers([]);
+    setIceBreakersError('');
+    setIceBreakersLoading(false);
+    setStarters([]);
+    setStartersError('');
+    setStartersLoading(false);
+  }, [selectedConversation]);
+
   // Remove the useEffect that automatically fetches prompts
   // Add button handlers to fetch ice breakers and conversation starters on demand
   const handleGenerateIceBreakers = async () => {
@@ -283,6 +293,9 @@ export default function ChatPage() {
           <div className="mb-4">
             <h2 className="text-lg font-semibold mb-2">Prompts</h2>
             <div className="mb-2">
+              <div className="text-sm text-blue-700 mb-1">
+                <span className="font-semibold">Ice Breakers:</span> Fun, light questions to break the ice and get the conversation started. Great for first messages or when things feel awkward.
+              </div>
               <span className="font-semibold text-blue-700">🧊 Ice Breakers</span>
               {iceBreakers.length === 0 ? (
                 <button
@@ -321,6 +334,9 @@ export default function ChatPage() {
               )}
             </div>
             <div className="mb-2">
+              <div className="text-sm text-green-700 mb-1">
+                <span className="font-semibold">Conversation Starters:</span> Thoughtful prompts based on your shared interests and values. Perfect for deeper, more meaningful conversations.
+              </div>
               <span className="font-semibold text-green-700">💬 Conversation Starters</span>
               {starters.length === 0 ? (
                 <button
