@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/services/firebase';
 import { collection, getDocs, QueryDocumentSnapshot, DocumentData, query, where, deleteDoc, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -129,13 +129,15 @@ export default function ProfileDiscoveryPage() {
     fetchPendingRequests();
   }, [user, connectSuccess]);
 
-  // Filter/sort profiles based on filter
-  let shownProfiles = profiles.filter(p => !currentUserProfile || p.id !== currentUserProfile.id);
-  if (filter === 'compatible') {
-    shownProfiles = shownProfiles.filter(p => compatScores[p.id] >= 70);
-  } else if (filter === 'best') {
-    shownProfiles = [...shownProfiles].sort((a, b) => (compatScores[b.id] || 0) - (compatScores[a.id] || 0));
-  }
+  const shownProfiles = useMemo(() => {
+    let result = profiles.filter(p => !currentUserProfile || p.id !== currentUserProfile.id);
+    if (filter === 'compatible') {
+      result = result.filter(p => compatScores[p.id] >= 70);
+    } else if (filter === 'best') {
+      result = [...result].sort((a, b) => (compatScores[b.id] || 0) - (compatScores[a.id] || 0));
+    }
+    return result;
+  }, [profiles, currentUserProfile, filter, compatScores]);
 
   // Fetch connected status for all shown profiles
   useEffect(() => {
