@@ -68,8 +68,14 @@ Generate exactly 5 ice breaker questions. Return ONLY a JSON array of strings, n
     // Try to parse the response as JSON
     let iceBreakers: string[] = [];
     try {
-      const text = completion.choices[0].message.content?.trim() || '';
+      let text = completion.choices[0].message.content?.trim() || '';
       console.log('Raw OpenAI response:', text);
+      // Remove code block markers if present
+      if (text.startsWith('```')) {
+        text = text.replace(/^```[a-z]*\n?/i, '').replace(/```$/, '').trim();
+      }
+      // Remove trailing commas before closing array
+      text = text.replace(/,(\s*[\]\}])/g, '$1');
       iceBreakers = JSON.parse(text);
     } catch (parseError) {
       console.error('Failed to parse JSON, using fallback:', parseError);
