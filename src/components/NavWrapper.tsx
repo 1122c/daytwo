@@ -189,7 +189,7 @@ export default function NavWrapper({ children }: { children: ReactNode }) {
               </button>
               {showProfileDropdown && (
                 <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded shadow z-50">
-                  <a href="/dashboard" className="block px-4 py-2 hover:bg-blue-50">User Settings</a>
+                  <a href="/settings" className="block px-4 py-2 hover:bg-blue-50">User Settings</a>
                   <a href="/privacy" className="block px-4 py-2 hover:bg-blue-50">Privacy</a>
                   <button
                     onClick={handleLogout}
