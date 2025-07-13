@@ -85,7 +85,7 @@ export default function ProfileDiscoveryPage() {
   // Fetch compatibility scores from API when needed
   useEffect(() => {
     async function fetchCompatScores() {
-      if (!currentUserProfile || filter === 'all') {
+      if (!currentUserProfile || !user) {
         setCompatScores({});
         return;
       }
@@ -108,7 +108,7 @@ export default function ProfileDiscoveryPage() {
       }
     }
     fetchCompatScores();
-  }, [profiles, currentUserProfile, filter]);
+  }, [profiles, currentUserProfile, filter, user]);
 
   useEffect(() => {
     async function fetchPendingRequests() {
@@ -281,10 +281,12 @@ export default function ProfileDiscoveryPage() {
                 <div className="mb-1 text-gray-700">
                   <span className="font-medium">Preferences:</span> {profile.preferences.join(', ')}
                 </div>
-                {filter !== 'all' && user && (
+                {/* Compatibility percentage always shown for logged-in users */}
+                {user && (
                   <div className="mb-1 text-blue-700 font-semibold">Compatibility: {compatScores[profile.id] ?? '--'}%</div>
                 )}
-                {filter === 'best' && user && (
+                {/* Show compatibility explanation bullets for all filters when user is logged in */}
+                {user && (
                   <ul className="mb-2 list-disc list-inside text-sm text-gray-700">
                     {(() => {
                       const current = currentUserProfile;
