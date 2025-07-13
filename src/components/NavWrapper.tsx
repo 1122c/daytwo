@@ -7,6 +7,7 @@ import type { UserProfile } from '@/services/websocketService';
 import { db } from '@/services/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
+import { MdChatBubbleOutline, MdNotificationsNone } from 'react-icons/md';
 
 type Notification = {
   id: string;
@@ -142,14 +143,17 @@ export default function NavWrapper({ children }: { children: ReactNode }) {
             <a href="/dashboard" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors">Dashboard</a>
             <a href="/discover" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors">Discover Profiles</a>
             <a href="/connections" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors">Connections</a>
-            <a href="/chat" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors">Chat</a>
+            <a href="/chat" className="px-3 py-1 rounded-md bg-gray-800 text-white no-underline hover:bg-blue-600 transition-colors flex items-center gap-1" aria-label="Chat" title="Chat">
+              <MdChatBubbleOutline className="inline-block text-xl align-middle" />
+            </a>
             <div className="relative">
               <button
-                className="relative px-3 py-1 rounded-md bg-gray-800 text-white hover:bg-blue-600 transition-colors"
+                className="relative px-3 py-1 rounded-md bg-gray-800 text-white hover:bg-blue-600 transition-colors flex items-center gap-1"
                 onClick={() => setShowNotifDropdown((v) => !v)}
                 aria-label="Notifications"
+                title="Notifications"
               >
-                <span className="material-icons align-middle">notifications</span>
+                <MdNotificationsNone className="inline-block text-xl align-middle" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs px-1.5 py-0.5">{unreadCount}</span>
                 )}
