@@ -55,6 +55,9 @@ export default function ConnectionsPage() {
   const [growthOpportunities, setGrowthOpportunities] = useState<Record<number, string[]>>({});
   const [growthLoading, setGrowthLoading] = useState<Record<number, boolean>>({});
   const [growthError, setGrowthError] = useState<Record<number, string>>({});
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+  const [actionError, setActionError] = useState<Record<string, string>>({});
+  const [actionSuccess, setActionSuccess] = useState<Record<string, string>>({});
 
   const router = useRouter();
 
@@ -203,6 +206,58 @@ export default function ConnectionsPage() {
     }
   }
 
+  // Add block and unmatch handlers
+  async function handleBlockUser(userId: string) {
+    if (!authUser) return;
+    if (!window.confirm('Are you sure you want to block this user? You will no longer see or interact with them.')) return;
+    setActionLoading((prev) => ({ ...prev, [userId]: true }));
+    setActionError((prev) => ({ ...prev, [userId]: '' }));
+    setActionSuccess((prev) => ({ ...prev, [userId]: '' }));
+    try {
+      const idToken = await authUser.getIdToken();
+      const res = await fetch('/api/blockUser', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ targetUserId: userId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to block user');
+      setActionSuccess((prev) => ({ ...prev, [userId]: 'User blocked.' }));
+    } catch (err: any) {
+      setActionError((prev) => ({ ...prev, [userId]: err.message || 'Failed to block user' }));
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [userId]: false }));
+    }
+  }
+  async function handleUnmatchUser(userId: string) {
+    if (!authUser) return;
+    if (!window.confirm('Are you sure you want to unmatch with this user?')) return;
+    setActionLoading((prev) => ({ ...prev, [userId]: true }));
+    setActionError((prev) => ({ ...prev, [userId]: '' }));
+    setActionSuccess((prev) => ({ ...prev, [userId]: '' }));
+    try {
+      const idToken = await authUser.getIdToken();
+      const res = await fetch('/api/unmatchUser', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ targetUserId: userId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to unmatch user');
+      setActionSuccess((prev) => ({ ...prev, [userId]: 'User unmatched.' }));
+    } catch (err: any) {
+      setActionError((prev) => ({ ...prev, [userId]: err.message || 'Failed to unmatch user' }));
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [userId]: false }));
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-2xl mx-auto">
@@ -306,6 +361,27 @@ export default function ConnectionsPage() {
                   >
                     Start Chat
                   </button>
+                  {/* Block and Unmatch buttons */}
+                  <button
+                    className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                    onClick={() => handleBlockUser(getPair(match)[1].id)}
+                    disabled={actionLoading[getPair(match)[1].id]}
+                  >
+                    {actionLoading[getPair(match)[1].id] ? 'Blocking...' : 'Block User'}
+                  </button>
+                  <button
+                    className="px-3 py-1 bg-gray-400 text-white rounded text-sm hover:bg-gray-600"
+                    onClick={() => handleUnmatchUser(getPair(match)[1].id)}
+                    disabled={actionLoading[getPair(match)[1].id]}
+                  >
+                    {actionLoading[getPair(match)[1].id] ? 'Unmatching...' : 'Unmatch User'}
+                  </button>
+                  {actionError[getPair(match)[1].id] && (
+                    <div className="text-red-600 text-xs mt-1">{actionError[getPair(match)[1].id]}</div>
+                  )}
+                  {actionSuccess[getPair(match)[1].id] && (
+                    <div className="text-green-600 text-xs mt-1">{actionSuccess[getPair(match)[1].id]}</div>
+                  )}
                 </div>
                 {/* Results */}
                 {promptType[i] !== 'starter' ? (
