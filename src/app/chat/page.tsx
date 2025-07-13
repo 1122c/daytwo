@@ -198,7 +198,8 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded shadow p-8 mt-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-pink-50 py-10">
+      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-6 md:p-8">
       <h1 className="text-2xl font-bold mb-6">Chat</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -212,7 +213,7 @@ export default function ChatPage() {
               {conversations.map((conversation) => (
                 <button
                   key={conversation.id}
-                  className={`w-full text-left p-3 rounded border ${
+                  className={`w-full text-left p-3 rounded-lg border transition-colors duration-100 ${
                     selectedConversation === conversation.id 
                       ? 'bg-blue-50 border-blue-300' 
                       : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
@@ -236,7 +237,7 @@ export default function ChatPage() {
           {selectedConversation ? (
             <div className="h-96 flex flex-col">
               {/* Messages Display */}
-              <div className="flex-1 overflow-y-auto border rounded p-4 mb-4 bg-gray-50">
+              <div className="flex-1 overflow-y-auto border rounded-lg p-4 mb-4 bg-gray-50">
                 {messages.length === 0 ? (
                   <p className="text-gray-500 text-center">No messages yet. Start the conversation!</p>
                 ) : (
@@ -247,7 +248,7 @@ export default function ChatPage() {
                         className={`flex ${message.senderId === authUser.uid ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-xs p-3 rounded-lg ${
+                          className={`max-w-xs p-3 rounded-lg shadow-sm ${
                             message.senderId === authUser.uid
                               ? 'bg-blue-600 text-white'
                               : 'bg-white border'
@@ -269,20 +270,20 @@ export default function ChatPage() {
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   placeholder="Type a message..."
-                  className="flex-1 border rounded px-3 py-2"
+                  className="flex-1 border rounded-lg px-3 py-2 shadow-sm"
                   disabled={loading}
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={loading || !newMessage.trim()}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-sm"
                 >
                   {loading ? 'Sending...' : 'Send'}
                 </button>
               </div>
             </div>
           ) : (
-            <div className="h-96 flex items-center justify-center border rounded bg-gray-50">
+            <div className="h-96 flex items-center justify-center border rounded-lg bg-gray-50">
               <p className="text-gray-500">Select a conversation to start chatting.</p>
             </div>
           )}
@@ -299,7 +300,7 @@ export default function ChatPage() {
               <span className="font-semibold text-blue-700">🧊 Ice Breakers</span>
               {iceBreakers.length === 0 ? (
                 <button
-                  className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
+                  className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs shadow-sm"
                   onClick={handleGenerateIceBreakers}
                   disabled={iceBreakersLoading || !selectedConversation}
                 >
@@ -309,12 +310,12 @@ export default function ChatPage() {
               {iceBreakersError && <div className="text-red-600 text-sm mt-2">{iceBreakersError}</div>}
               {iceBreakers.length > 0 && (
                 <>
-                  <ul className="mt-1 text-sm bg-blue-50 rounded p-2">
+                  <ul className="mt-1 text-sm bg-blue-50 rounded-lg p-2 shadow-sm">
                     {iceBreakers.map((q, i) => (
                       <li key={i} className="mb-1 flex items-center gap-2">
                         <span>🎲 {q}</span>
                         <button
-                          className="text-xs text-blue-600 underline"
+                          className="text-xs text-blue-600 underline hover:text-blue-800"
                           onClick={() => setNewMessage(q)}
                           title="Copy to message input"
                         >
@@ -324,7 +325,7 @@ export default function ChatPage() {
                     ))}
                   </ul>
                   <button
-                    className="mt-2 px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs"
+                    className="mt-2 px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs shadow-sm"
                     onClick={handleGenerateIceBreakers}
                     disabled={iceBreakersLoading || !selectedConversation}
                   >
@@ -340,7 +341,7 @@ export default function ChatPage() {
               <span className="font-semibold text-green-700">💬 Conversation Starters</span>
               {starters.length === 0 ? (
                 <button
-                  className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs"
+                  className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs shadow-sm"
                   onClick={handleGenerateStarters}
                   disabled={startersLoading || !selectedConversation}
                 >
@@ -350,12 +351,12 @@ export default function ChatPage() {
               {startersError && <div className="text-red-600 text-sm mt-2">{startersError}</div>}
               {starters.length > 0 && (
                 <>
-                  <ul className="mt-1 text-sm bg-green-50 rounded p-2">
+                  <ul className="mt-1 text-sm bg-green-50 rounded-lg p-2 shadow-sm">
                     {starters.map((q, i) => (
                       <li key={i} className="mb-1 flex items-center gap-2">
                         <span>💡 {q}</span>
                         <button
-                          className="text-xs text-green-700 underline"
+                          className="text-xs text-green-700 underline hover:text-green-900"
                           onClick={() => setNewMessage(q)}
                           title="Copy to message input"
                         >
@@ -365,7 +366,7 @@ export default function ChatPage() {
                     ))}
                   </ul>
                   <button
-                    className="mt-2 px-2 py-1 bg-green-200 text-green-800 rounded text-xs"
+                    className="mt-2 px-2 py-1 bg-green-200 text-green-800 rounded text-xs shadow-sm"
                     onClick={handleGenerateStarters}
                     disabled={startersLoading || !selectedConversation}
                   >
@@ -378,5 +379,6 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
+  </div>
   );
 } 

@@ -28,6 +28,7 @@ export default function NavWrapper({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   // Listen for incoming connection requests and new chats
   useEffect(() => {
@@ -174,7 +175,27 @@ export default function NavWrapper({ children }: { children: ReactNode }) {
                 </div>
               )}
             </div>
-            <button onClick={handleLogout} className="px-3 py-1 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors ml-2">Logout</button>
+            {/* Account Dropdown */}
+            <div className="relative">
+              <button
+                className="px-3 py-1 rounded-md bg-gray-800 text-white hover:bg-blue-600 transition-colors"
+                onClick={() => setShowProfileDropdown(v => !v)}
+              >
+                Account
+              </button>
+              {showProfileDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded shadow z-50">
+                  <a href="/dashboard" className="block px-4 py-2 hover:bg-blue-50">User Settings</a>
+                  <a href="/privacy" className="block px-4 py-2 hover:bg-blue-50">Privacy</a>
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 hover:bg-blue-50 text-red-600"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </nav>
       )}
