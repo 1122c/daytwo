@@ -60,6 +60,14 @@ export default function ProfileDiscoveryPage() {
   const [pendingRequests, setPendingRequests] = useState<Record<string, string>>({});
   const [connected, setConnected] = useState<Record<string, boolean>>({});
   const [compatThreshold, setCompatThreshold] = useState(70);
+  // const [selectedValues, setSelectedValues] = useState<string[]>([]);
+  // const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  // const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
+
+  // Gather all unique options for dropdowns
+  // const allValues = useMemo(() => Array.from(new Set(profiles.flatMap(p => p.values))).sort(), [profiles]);
+  // const allGoals = useMemo(() => Array.from(new Set(profiles.flatMap(p => p.goals))).sort(), [profiles]);
+  // const allPreferences = useMemo(() => Array.from(new Set(profiles.flatMap(p => p.preferences))).sort(), [profiles]);
 
   useEffect(() => {
     async function fetchProfiles() {
@@ -132,13 +140,23 @@ export default function ProfileDiscoveryPage() {
 
   const shownProfiles = useMemo(() => {
     let result = profiles.filter(p => !currentUserProfile || p.id !== currentUserProfile.id);
+    // Filter by onboarding criteria (commented out for now)
+    // if (selectedValues.length > 0) {
+    //   result = result.filter(p => selectedValues.every(val => p.values.includes(val)));
+    // }
+    // if (selectedGoals.length > 0) {
+    //   result = result.filter(p => selectedGoals.every(goal => p.goals.includes(goal)));
+    // }
+    // if (selectedPreferences.length > 0) {
+    //   result = result.filter(p => selectedPreferences.every(pref => p.preferences.includes(pref)));
+    // }
     if (filter === 'compatible') {
       result = result.filter(p => compatScores[p.id] >= compatThreshold);
     } else if (filter === 'best') {
       result = [...result].sort((a, b) => (compatScores[b.id] || 0) - (compatScores[a.id] || 0));
     }
     return result;
-  }, [profiles, currentUserProfile, filter, compatScores, compatThreshold]);
+  }, [profiles, currentUserProfile, filter, compatScores, compatThreshold/*, selectedValues, selectedGoals, selectedPreferences*/]);
 
   // Fetch connected status for all shown profiles
   useEffect(() => {
@@ -219,8 +237,9 @@ export default function ProfileDiscoveryPage() {
         {/* Onboarding link removed */}
       </nav>
       <h1 className="text-3xl font-bold text-center mb-8">Discover Profiles</h1>
-      <div className="max-w-2xl mx-auto mb-6 flex gap-4 items-center">
+      <div className="max-w-2xl mx-auto mb-6 flex gap-4 items-center flex-wrap">
         <span className="font-semibold">Filter:</span>
+        {/* Existing filter buttons */}
         <button
           className={`px-3 py-1 rounded ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-white border border-blue-600 text-blue-700'}`}
           onClick={() => setFilter('all')}
@@ -258,6 +277,53 @@ export default function ProfileDiscoveryPage() {
         )}
         {!user && <span className="text-xs text-gray-500">(Log in to see compatibility)</span>}
       </div>
+      {/* Onboarding criteria filters (commented out for now) */}
+      {/*
+      <div className="max-w-2xl mx-auto mb-6 flex gap-4 items-center flex-wrap">
+        <div>
+          <label htmlFor="values-filter" className="block text-sm font-medium text-gray-700 mb-1">Values</label>
+          <select
+            id="values-filter"
+            multiple
+            value={selectedValues}
+            onChange={e => setSelectedValues(Array.from(e.target.selectedOptions, option => option.value))}
+            className="border rounded px-2 py-1 min-w-[120px]"
+          >
+            {allValues.map(val => (
+              <option key={val} value={val}>{val}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="goals-filter" className="block text-sm font-medium text-gray-700 mb-1">Goals</label>
+          <select
+            id="goals-filter"
+            multiple
+            value={selectedGoals}
+            onChange={e => setSelectedGoals(Array.from(e.target.selectedOptions, option => option.value))}
+            className="border rounded px-2 py-1 min-w-[120px]"
+          >
+            {allGoals.map(goal => (
+              <option key={goal} value={goal}>{goal}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="preferences-filter" className="block text-sm font-medium text-gray-700 mb-1">Preferences</label>
+          <select
+            id="preferences-filter"
+            multiple
+            value={selectedPreferences}
+            onChange={e => setSelectedPreferences(Array.from(e.target.selectedOptions, option => option.value))}
+            className="border rounded px-2 py-1 min-w-[120px]"
+          >
+            {allPreferences.map(pref => (
+              <option key={pref} value={pref}>{pref}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      */}
       {(compatLoading && filter !== 'all') ? (
         <div className="text-center text-gray-500">Calculating compatibility...</div>
       ) : loading ? (
