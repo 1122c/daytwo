@@ -6,8 +6,19 @@ import { doc, getDoc, setDoc, getDocs, collection, query, where } from 'firebase
 import { useRouter } from 'next/navigation';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import React from 'react';
-import type { UserProfile } from '@/services/websocketService';
+import type { UserProfile as BaseUserProfile } from '@/services/websocketService';
 import Image from 'next/image';
+
+type UserProfile = BaseUserProfile & {
+  publicProfiles: {
+    linkedin?: string;
+    twitter?: string;
+    instagram?: string;
+    tiktok?: string;
+    onlyfans?: string;
+    website?: string;
+  };
+};
 
 export default function DashboardPage() {
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
@@ -30,6 +41,7 @@ export default function DashboardPage() {
       instagram: '',
       tiktok: '',
       onlyfans: '',
+      website: '',
     } as UserProfile['publicProfiles'],
     allowStrangerChats: false,
   });
@@ -88,6 +100,7 @@ export default function DashboardPage() {
               instagram: data.publicProfiles?.instagram || '',
               tiktok: data.publicProfiles?.tiktok || '',
               onlyfans: data.publicProfiles?.onlyfans || '',
+              website: data.publicProfiles?.website || '',
             },
             allowStrangerChats: data.allowStrangerChats ?? false,
           });
@@ -516,6 +529,14 @@ export default function DashboardPage() {
             placeholder="OnlyFans URL"
             value={profile.publicProfiles?.onlyfans}
             onChange={handleFieldEdit((e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, onlyfans: e.target.value } }))}
+          />
+          <label className="block mb-2 font-semibold">Personal Website URL</label>
+          <input
+            className="w-full border rounded p-2 mb-4"
+            type="url"
+            placeholder="Personal Website URL"
+            value={profile.publicProfiles?.website}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, publicProfiles: { ...profile.publicProfiles, website: e.target.value } }))}
           />
           <button
             type="submit"

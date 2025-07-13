@@ -32,6 +32,17 @@ const EXAMPLES = {
   identityTags: ["lgbtq+", "women in tech", "bipoc"],
 };
 
+// Helper function to normalize URLs
+const normalizeUrl = (url: string): string => {
+  if (!url) return '';
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl) return '';
+  if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+    return `https://${trimmedUrl}`;
+  }
+  return trimmedUrl;
+};
+
 export default function OnboardingForm() {
   const [step, setStep] = useState(0);
   const [values, setValues] = useState("");
@@ -51,10 +62,11 @@ export default function OnboardingForm() {
     instagram: "",
     tiktok: "",
     onlyfans: "",
+    website: "",
   });
+  const [socialError, setSocialError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState("");
   const [usernameError, setUsernameError] = useState("");
@@ -96,29 +108,61 @@ export default function OnboardingForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    console.log("Submit button clicked");
     setLoading(true);
-    setError("");
     setSuccess(false);
     setUsernameError("");
+    setSocialError("");
+    
     if (!user) {
-      setError("You must be logged in to submit your profile.");
+      console.log("No user found");
       setLoading(false);
       return;
     }
+    console.log("User found:", user.email);
+    
     // Username required and must be unique
     if (!username.trim()) {
+      console.log("Username is empty");
       setUsernameError("Username is required.");
       setLoading(false);
       return;
     }
+    console.log("Username:", username);
+    
     const isUnique = await checkUsernameUnique(username.trim());
+    console.log("Username unique check:", isUnique);
     if (!isUnique) {
       setUsernameError("That username is already taken. Please choose another.");
       setLoading(false);
       return;
     }
+    
+    // At least one social URL required
+    const hasSocial = Object.values(profiles).some((v) => v.trim() !== "");
+    console.log("Has social profiles:", hasSocial);
+    console.log("Profile values:", profiles);
+    if (!hasSocial) {
+      setSocialError("Please provide at least one social URL.");
+      setLoading(false);
+      setStep(10);
+      return;
+    }
+    
     try {
-      await setDoc(doc(db, "profiles", user.uid), {
+      console.log("Attempting to save profile...");
+      // Normalize all profile URLs before saving
+      const normalizedProfiles = {
+        linkedin: normalizeUrl(profiles.linkedin),
+        twitter: normalizeUrl(profiles.twitter),
+        instagram: normalizeUrl(profiles.instagram),
+        tiktok: normalizeUrl(profiles.tiktok),
+        onlyfans: normalizeUrl(profiles.onlyfans),
+        website: normalizeUrl(profiles.website),
+      };
+      console.log("Normalized profiles:", normalizedProfiles);
+      
+      const profileData = {
         values: values ? values.split(",").map((v) => v.trim().toLowerCase()).filter(Boolean) : [],
         goals: goals ? goals.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
         preferences: preferences ? preferences.split(",").map((p) => p.trim().toLowerCase()).filter(Boolean) : [],
@@ -130,16 +174,22 @@ export default function OnboardingForm() {
         location: location ? location.trim() : "",
         timezone: timezone ? timezone.trim() : "",
         identityTags: identityTags ? identityTags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean) : [],
-        publicProfiles: profiles,
+        publicProfiles: normalizedProfiles,
         createdAt: new Date(),
-        name: username.trim(), // Use chosen username
+        name: username.trim(),
         uid: user.uid,
         email: user.email || "",
-      });
+      };
+      
+      console.log("Profile data to save:", profileData);
+      
+      await setDoc(doc(db, "profiles", user.uid), profileData);
+      console.log("Profile saved successfully!");
       setSuccess(true);
       router.push("/dashboard");
     } catch (error) {
-      setError("Failed to save profile. Please try again.");
+      console.error("Error saving profile:", error);
+      setSocialError("There was an error saving your profile. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -160,14 +210,21 @@ export default function OnboardingForm() {
         {success && (
           <div className="mb-2 text-green-600">Profile saved successfully!</div>
         )}
-        {error && (
-          <div className="mb-2 text-red-600">{error}</div>
+        
+        {/* Show username status on all steps */}
+        {step > 0 && (
+          <div className="mb-3 p-2 bg-gray-100 rounded text-sm">
+            <span className="font-semibold">Username:</span> {username || <span className="text-red-600">Not set - go back to step 1!</span>}
+          </div>
         )}
+        
         {step === 0 && (
           <div>
-            <label className="block mb-2 font-semibold">Choose a username</label>
+            <label className="block mb-2 font-semibold">
+              Choose a username <span className="text-red-500">*</span>
+            </label>
             <input
-              className="w-full border rounded p-2 mb-2"
+              className="w-full border rounded p-2 mb-1"
               type="text"
               placeholder="e.g. rachel, dayonefan, mentor_jane"
               value={username}
@@ -177,9 +234,13 @@ export default function OnboardingForm() {
               spellCheck={false}
               maxLength={32}
             />
+            <div className="text-xs text-gray-500 mb-2">This will be your unique identifier on the platform</div>
             {usernameError && <div className="text-red-600 text-sm mb-2">{usernameError}</div>}
-            <label className="block mb-2 font-semibold">What are your core values?</label>
-            <div className="text-xs text-gray-500 mb-1">e.g. what matters most to you in relationships and life?</div>
+            
+            <label className="block mb-2 font-semibold mt-4">
+              What are your core values?
+            </label>
+            <div className="text-xs text-gray-500 mb-1">e.g. what matters most to you in relationships and life? (optional)</div>
             <div className="flex flex-wrap gap-2 mb-2">
               {EXAMPLES.values.map((ex) => (
                 <button type="button" key={ex} className="px-2 py-1 bg-gray-200 rounded text-xs" onClick={() => addChip(setValues, ex, values)}>{ex}</button>
@@ -191,16 +252,20 @@ export default function OnboardingForm() {
               placeholder="e.g. empathy, growth, curiosity"
               value={values}
               onChange={(e) => setValues(e.target.value)}
-              required
               disabled={!user}
               spellCheck={true}
             />
+            <div className="text-xs text-gray-500 mt-4">
+              <span className="text-red-500">*</span> Required field
+            </div>
           </div>
         )}
         {step === 1 && (
           <div>
-            <label className="block mb-2 font-semibold">What are your relational goals?</label>
-            <div className="text-xs text-gray-500 mb-1">e.g. what do you hope to get out of this platform?</div>
+            <label className="block mb-2 font-semibold">
+              What are your relational goals?
+            </label>
+            <div className="text-xs text-gray-500 mb-1">e.g. what do you hope to get out of this platform? (optional)</div>
             <div className="flex flex-wrap gap-2 mb-2">
               {EXAMPLES.goals.map((ex) => (
                 <button type="button" key={ex} className="px-2 py-1 bg-gray-200 rounded text-xs" onClick={() => addChip(setGoals, ex, goals)}>{ex}</button>
@@ -212,7 +277,6 @@ export default function OnboardingForm() {
               placeholder="e.g. find a mentor, make friends"
               value={goals}
               onChange={(e) => setGoals(e.target.value)}
-              required
               disabled={!user}
               spellCheck={true}
             />
@@ -382,47 +446,83 @@ export default function OnboardingForm() {
         )}
         {step === 10 && (
           <div>
-            <label className="block mb-2 font-semibold">Public Profiles (optional)</label>
+            <label className="block mb-2 font-semibold">
+              Public Profiles <span className="text-red-500">*</span>
+              <span className="text-sm font-normal text-gray-600 ml-2">(at least one required)</span>
+            </label>
+            {socialError && <div className="mb-2 text-red-600">{socialError}</div>}
             <input
               className="w-full border rounded p-2 mb-2"
-              type="url"
-              placeholder="LinkedIn URL"
+              type="text"
+              placeholder="LinkedIn URL (e.g., linkedin.com/in/username)"
               value={profiles.linkedin}
-              onChange={(e) => setProfiles({ ...profiles, linkedin: e.target.value })}
+              onChange={(e) => {
+                setProfiles({ ...profiles, linkedin: e.target.value });
+                setSocialError("");
+              }}
               disabled={!user}
             />
             <input
               className="w-full border rounded p-2 mb-2"
-              type="url"
-              placeholder="Twitter URL"
+              type="text"
+              placeholder="Twitter URL (e.g., twitter.com/username)"
               value={profiles.twitter}
-              onChange={(e) => setProfiles({ ...profiles, twitter: e.target.value })}
+              onChange={(e) => {
+                setProfiles({ ...profiles, twitter: e.target.value });
+                setSocialError("");
+              }}
               disabled={!user}
             />
             <input
               className="w-full border rounded p-2 mb-2"
-              type="url"
-              placeholder="Instagram URL"
+              type="text"
+              placeholder="Instagram URL (e.g., instagram.com/username)"
               value={profiles.instagram}
-              onChange={(e) => setProfiles({ ...profiles, instagram: e.target.value })}
+              onChange={(e) => {
+                setProfiles({ ...profiles, instagram: e.target.value });
+                setSocialError("");
+              }}
               disabled={!user}
             />
             <input
               className="w-full border rounded p-2 mb-2"
-              type="url"
-              placeholder="TikTok URL"
+              type="text"
+              placeholder="TikTok URL (e.g., tiktok.com/@username)"
               value={profiles.tiktok}
-              onChange={(e) => setProfiles({ ...profiles, tiktok: e.target.value })}
+              onChange={(e) => {
+                setProfiles({ ...profiles, tiktok: e.target.value });
+                setSocialError("");
+              }}
               disabled={!user}
             />
             <input
               className="w-full border rounded p-2 mb-2"
-              type="url"
+              type="text"
               placeholder="OnlyFans URL"
               value={profiles.onlyfans}
-              onChange={(e) => setProfiles({ ...profiles, onlyfans: e.target.value })}
+              onChange={(e) => {
+                setProfiles({ ...profiles, onlyfans: e.target.value });
+                setSocialError("");
+              }}
               disabled={!user}
             />
+            <input
+              className="w-full border rounded p-2 mb-2"
+              type="text"
+              placeholder="Personal Website URL"
+              value={profiles.website}
+              onChange={(e) => {
+                setProfiles({ ...profiles, website: e.target.value });
+                setSocialError("");
+              }}
+              disabled={!user}
+            />
+            <div className="text-xs text-gray-500 mt-2">
+              💡 Tip: You can enter URLs with or without https://
+            </div>
+            <div className="text-xs text-gray-500">
+              <span className="text-red-500">*</span> At least one social profile is required
+            </div>
           </div>
         )}
       </div>
@@ -456,4 +556,4 @@ export default function OnboardingForm() {
       </div>
     </form>
   );
-} 
+}
