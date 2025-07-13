@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
   const [profile, setProfile] = useState({
     name: '',
+    bio: '',
     values: '',
     goals: '',
     preferences: '',
@@ -83,6 +84,7 @@ export default function DashboardPage() {
           const data = docSnap.data();
           setProfile({
             name: data.name || '',
+            bio: data.bio || '',
             values: Array.isArray(data.values) ? data.values.join(', ') : data.values || '',
             goals: Array.isArray(data.goals) ? data.goals.join(', ') : data.goals || '',
             preferences: Array.isArray(data.preferences) ? data.preferences.join(', ') : data.preferences || '',
@@ -219,6 +221,7 @@ export default function DashboardPage() {
     try {
       await setDoc(doc(db, 'profiles', authUser.uid), {
         name: profile.name.trim(),
+        bio: profile.bio?.slice(0, 300) || '',
         email: email.trim(),
         values: profile.values ? profile.values.split(',').map((v) => v.trim().toLowerCase()).filter(Boolean) : [],
         goals: profile.goals ? profile.goals.split(',').map((g) => g.trim().toLowerCase()).filter(Boolean) : [],
@@ -343,6 +346,16 @@ export default function DashboardPage() {
             maxLength={32}
           />
           {usernameError && <div className="text-red-600 text-sm mb-2">{usernameError}</div>}
+          <label className="block mb-2 font-semibold">Bio <span className='text-xs text-gray-500'>(max 300 characters)</span></label>
+          <textarea
+            className="w-full border rounded p-2 mb-2"
+            value={profile.bio}
+            onChange={handleFieldEdit((e) => setProfile({ ...profile, bio: e.target.value.slice(0, 300) }))}
+            placeholder="Tell us a little about yourself, your background, or what you're looking for..."
+            maxLength={300}
+            rows={4}
+          />
+          <div className="text-xs text-gray-500 mb-2 text-right">{profile.bio.length}/300</div>
           <label className="block mb-2 font-semibold">Values (comma separated)</label>
           <div className="text-xs text-gray-500 mb-1">e.g. what matters most to you in relationships and life?</div>
           <div className="flex flex-wrap gap-2 mb-2">

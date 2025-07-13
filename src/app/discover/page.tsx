@@ -59,6 +59,7 @@ export default function ProfileDiscoveryPage() {
   const [connectError, setConnectError] = useState<Record<string, string>>({});
   const [pendingRequests, setPendingRequests] = useState<Record<string, string>>({});
   const [connected, setConnected] = useState<Record<string, boolean>>({});
+  const [compatThreshold, setCompatThreshold] = useState(70);
 
   useEffect(() => {
     async function fetchProfiles() {
@@ -132,12 +133,12 @@ export default function ProfileDiscoveryPage() {
   const shownProfiles = useMemo(() => {
     let result = profiles.filter(p => !currentUserProfile || p.id !== currentUserProfile.id);
     if (filter === 'compatible') {
-      result = result.filter(p => compatScores[p.id] >= 70);
+      result = result.filter(p => compatScores[p.id] >= compatThreshold);
     } else if (filter === 'best') {
       result = [...result].sort((a, b) => (compatScores[b.id] || 0) - (compatScores[a.id] || 0));
     }
     return result;
-  }, [profiles, currentUserProfile, filter, compatScores]);
+  }, [profiles, currentUserProfile, filter, compatScores, compatThreshold]);
 
   // Fetch connected status for all shown profiles
   useEffect(() => {
@@ -240,6 +241,21 @@ export default function ProfileDiscoveryPage() {
         >
           Compatible Only
         </button>
+        {filter === 'compatible' && (
+          <div className="flex items-center gap-2 ml-4">
+            <label htmlFor="compat-threshold" className="text-sm text-gray-700">Min %:</label>
+            <input
+              id="compat-threshold"
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              value={compatThreshold}
+              onChange={e => setCompatThreshold(Math.max(0, Math.min(100, Number(e.target.value))))}
+              className="w-16 border rounded px-2 py-1 text-center"
+            />
+          </div>
+        )}
         {!user && <span className="text-xs text-gray-500">(Log in to see compatibility)</span>}
       </div>
       {(compatLoading && filter !== 'all') ? (
@@ -267,6 +283,23 @@ export default function ProfileDiscoveryPage() {
                 </div>
                 {filter !== 'all' && user && (
                   <div className="mb-1 text-blue-700 font-semibold">Compatibility: {compatScores[profile.id] ?? '--'}%</div>
+                )}
+                {filter === 'best' && user && (
+                  <ul className="mb-2 list-disc list-inside text-sm text-gray-700">
+                    {(() => {
+                      const current = currentUserProfile;
+                      if (!current) return null;
+                      const sharedValues = profile.values.filter(v => current.values.includes(v));
+                      const sharedGoals = profile.goals.filter(g => current.goals.includes(g));
+                      const sharedPreferences = profile.preferences.filter(p => current.preferences.includes(p));
+                      const bullets = [];
+                      if (sharedValues.length > 0) bullets.push(`Shared values: ${sharedValues.join(', ')}`);
+                      if (sharedGoals.length > 0) bullets.push(`Shared goals: ${sharedGoals.join(', ')}`);
+                      if (sharedPreferences.length > 0) bullets.push(`Shared preferences: ${sharedPreferences.join(', ')}`);
+                      if (bullets.length === 0) bullets.push('Potential for growth or complementary interests.');
+                      return bullets.map((b, i) => <li key={i}>{b}</li>);
+                    })()}
+                  </ul>
                 )}
                 {profile.publicProfiles && (
                   <div className="mt-2">
